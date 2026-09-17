@@ -1,0 +1,37 @@
+version: 2
+weights:
+  demand: 0.25
+  competition: 0.20
+  customer_gap: 0.25
+  economics: 0.15
+  ai_suitability: 0.10
+  expansion: 0.05
+confidence:
+  target_books: 10
+  target_reviews: 100
+  target_cross_book_coverage: 0.70
+  target_field_completeness: 0.80
+  target_analysis_completeness: 0.90
+  target_recency_score: 60
+  maximum_single_book_share: 0.50
+component_targets:
+  review_traction: 1500
+  difficult_review_scale: 2000
+  maximum_rank: 1000000
+  recent_review_days: 365
+  recent_publication_days: 1095
+  mature_publication_days: 1825
+  recurring_gap_ratio: 0.25
+  price_floor: 7.99
+  price_target: 17.99
+  preferred_min_pages: 100
+  preferred_max_pages: 250
+  target_formats: 2
+  target_topics: 8
+  target_outcomes: 6
+  target_solution_angles: 8
+recommendations:
+  strong_validation_candidate: 80
+  promising: 70
+  worth_investigating: 58
+  needs_more_data: 40
