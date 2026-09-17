@@ -55,3 +55,13 @@ def test_app_dashboard_and_sample_load(monkeypatch, tmp_path) -> None:
     assert not app.exception
     assert len(app.metric) >= 4
     assert app.download_button
+
+    app.switch_page("app_pages/compare.py").run()
+    assert not app.exception
+    assert app.title[0].value == "Compare"
+    comparison_picker = app.multiselect(key="comparison_niches")
+    assert len(comparison_picker.value) == 3
+    comparison_picker.set_value(comparison_picker.value[:2]).run()
+    assert not app.exception
+    assert len(app.dataframe[0].value) == 2
+    assert app.warning or app.success

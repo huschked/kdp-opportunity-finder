@@ -1,6 +1,6 @@
 # KDP Opportunity Finder — Kanban
 
-Last updated: 2026-09-08
+Last updated: 2026-09-17
 
 This board tracks execution. `ARCHITECTURE.md` remains the authority for system design, data relationships, and scope decisions.
 
@@ -12,31 +12,30 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 2 — Ingestion and browsing | Done | Reliable manual/CSV/JSON input and evidence browsing |
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
-| Phase 5 — Outputs and workflow | In progress | Opportunity reports and evidence-grounded book specifications complete; comparison is next |
+| Phase 5 — Outputs and workflow | In progress | Reports, book specifications, and niche comparison complete; pipeline is next |
 | Phase 6 — Hardening | Backlog | Expanded tests, migrations, logging, performance, and UI polish |
 
 ## In progress
 
-No active card. Start with `P5-COMPARE-01`.
+No active card. Start with `P5-PIPELINE-01`.
 
 ## Ready
 
-### P5-COMPARE-01 — Decision-useful niche comparison
+### P5-PIPELINE-01 — Status controls and pipeline view
 
 - **Priority:** P1
-- **Deliverable:** Compare selected niches side by side without hiding differences in evidence quality.
+- **Deliverable:** Manage niche workflow status and review the project pipeline without leaving the app.
 - **Acceptance criteria:**
-  - Automated and human-adjusted scores, confidence, UDI, components, and warning counts remain distinct.
-  - Focused charts expose material differences without implying false precision.
-  - Sparse or materially unequal evidence coverage is called out before ranking.
-- **Dependencies:** Phase 4 decision snapshots.
-- **Verification:** Ordering, missing-score, unequal-confidence, and Streamlit interaction tests.
+  - Status changes use the defined workflow values and are persisted explicitly.
+  - Pipeline counts and niche rows stay consistent with saved statuses.
+  - Decision context remains visible without turning status into an automatic publish decision.
+- **Dependencies:** Existing niche statuses and Phase 4 decision snapshots.
+- **Verification:** Status-transition, filtering, count-consistency, and Streamlit interaction tests.
 
 ## Backlog
 
 ### Phase 5 — Outputs and workflow
 
-- `P5-PIPELINE-01` — Status controls and pipeline view.
 - `P5-EXPORT-01` — CSV and JSON exports.
 
 ### Phase 6 — Hardening
@@ -225,6 +224,19 @@ Use this section only when a card cannot progress without a user decision, missi
 
 - Forty-one tests pass, including sparse and analyzed evidence, citation integrity, regulated-topic review, append-only history, score/analysis staleness, and Streamlit generation.
 - Python compilation completed successfully.
+
+### P5-COMPARE-01 — Decision-useful niche comparison
+
+- Selected niches use their latest immutable score snapshots and remain visible when unscored.
+- Automated score, human-adjusted score, decision score, confidence, UDI, components, warning counts, and coverage inputs remain separate.
+- Evidence-comparability warnings appear before ranking for missing scores, sparse evidence, materially unequal confidence or coverage, and differing scoring versions.
+- Focused score-versus-confidence and component charts use one-decimal display precision and preserve the confidence gate.
+
+### P5-COMPARE-VERIFY-01 — Niche comparison verification
+
+- Forty-four tests pass, including decision-score ordering, missing-score handling, unequal-confidence warnings, metric separation, and Streamlit multiselect interaction.
+- Python compilation completed successfully.
+- Temporary Streamlit server health and root endpoints returned HTTP 200.
 
 ## Scope guardrails
 

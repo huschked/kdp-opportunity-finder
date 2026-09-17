@@ -30,9 +30,10 @@ Implemented:
 - append-only human score adjustments that preserve every automated value
 - evidence-linked Markdown opportunity reports with in-app preview, download, and snapshot-staleness warnings
 - evidence-grounded book specifications with cited design choices, labeled assumptions, explicit expert-review requirements, and append-only draft history
+- decision-useful niche comparison with separate automated and human-adjusted scores, confidence, UDI, component charts, and evidence-coverage warnings
 - database, scoring, import, cleaning, market-summary, analysis, and Streamlit tests
 
-Reports, book concepts, comparison, and pipeline workflows are scheduled for later phases. See [ARCHITECTURE.md](ARCHITECTURE.md) for design and [KANBAN.md](KANBAN.md) for live execution status.
+Pipeline controls and export workflows remain scheduled for later Phase 5 work. See [ARCHITECTURE.md](ARCHITECTURE.md) for design and [KANBAN.md](KANBAN.md) for live execution status.
 
 ## Installation
 
@@ -77,6 +78,8 @@ You can record a human decision adjustment with a required rationale. The adjust
 Open the dedicated **Opportunity report** page in the sidebar—or select it from the Niche detail view—to preview and download the latest report. Score claims cite the immutable snapshot, while market and review findings cite their stored book, pain-point, praise-feature, and review IDs. If books or reviews were added after scoring, the report tells you to recalculate before relying on the decision.
 
 Open **Book specification** in the sidebar to generate a local planning draft from the latest score and evidence. Every product decision is labeled **Evidence-backed**, **Assumption to validate**, or **Risk review required**. The preview and Markdown download include supporting evidence IDs, validation questions, accuracy/rights safeguards, and the source score snapshot. Generating again creates a new draft rather than overwriting history.
+
+Open **Compare** to select two to six niches. The page shows evidence-comparability warnings before ranking, preserves automated and human-adjusted scores as separate fields, and compares confidence, UDI, components, warning counts, and stored coverage inputs. Unscored niches stay visible but are not assigned a rank.
 
 ## Import data
 
