@@ -55,6 +55,7 @@ Important choices:
 - `analysis_runs` records provider, model, prompt version, parameters, result, status, usage, and cost.
 - `score_snapshots` stores component values, explanation JSON, weights, automated total, optional human total, and confidence. Raw observations stay in their source tables.
 - Human overrides are additive fields or new snapshots; automated values are not overwritten.
+- `niche_status_transitions` is an append-only audit trail for manual workflow changes. The current status remains on `niches` for filtering, while every transition retains its prior status, new status, rationale, and timestamp.
 
 SQLite uniqueness rules prevent duplicate source identifiers within a source and duplicate normalized review text within a book. Nullable marketplace fields remain nullable; missing facts are never filled with estimates.
 
@@ -158,4 +159,3 @@ Broader tests, malformed-input UX, migration support, structured logging, perfor
 - English review analysis is the initial target, but source text is stored as Unicode.
 - Scores guide deeper validation and never assert expected sales.
 - Python 3.12 is the target; the code may work on compatible recent Python 3 versions.
-

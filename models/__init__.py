@@ -10,6 +10,7 @@ from models.entities import (
     MarketSnapshot,
     Niche,
     NicheStatus,
+    NicheStatusTransition,
     PainPoint,
     PraiseFeature,
     Review,
@@ -29,6 +30,7 @@ __all__ = [
     "MarketSnapshot",
     "Niche",
     "NicheStatus",
+    "NicheStatusTransition",
     "PainPoint",
     "PraiseFeature",
     "Review",
@@ -37,4 +39,3 @@ __all__ = [
     "ReviewPraiseFeature",
     "ScoreSnapshot",
 ]
-

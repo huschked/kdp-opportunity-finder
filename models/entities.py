@@ -64,6 +64,22 @@ class Niche(TimestampMixin, Base):
     analysis_runs: Mapped[list[AnalysisRun]] = relationship(back_populates="niche", cascade="all, delete-orphan")
     score_snapshots: Mapped[list[ScoreSnapshot]] = relationship(back_populates="niche", cascade="all, delete-orphan")
     book_concepts: Mapped[list[BookConcept]] = relationship(back_populates="niche", cascade="all, delete-orphan")
+    status_transitions: Mapped[list[NicheStatusTransition]] = relationship(
+        back_populates="niche", cascade="all, delete-orphan"
+    )
+
+
+class NicheStatusTransition(Base):
+    __tablename__ = "niche_status_transitions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    niche_id: Mapped[int] = mapped_column(ForeignKey("niches.id"), index=True)
+    from_status: Mapped[str] = mapped_column(String(30))
+    to_status: Mapped[str] = mapped_column(String(30), index=True)
+    rationale: Mapped[str] = mapped_column(Text)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+    niche: Mapped[Niche] = relationship(back_populates="status_transitions")
 
 
 class DataSource(Base):

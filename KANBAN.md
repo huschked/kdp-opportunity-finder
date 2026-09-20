@@ -1,6 +1,6 @@
 # KDP Opportunity Finder — Kanban
 
-Last updated: 2026-09-17
+Last updated: 2026-09-19
 
 This board tracks execution. `ARCHITECTURE.md` remains the authority for system design, data relationships, and scope decisions.
 
@@ -12,31 +12,31 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 2 — Ingestion and browsing | Done | Reliable manual/CSV/JSON input and evidence browsing |
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
-| Phase 5 — Outputs and workflow | In progress | Reports, book specifications, and niche comparison complete; pipeline is next |
+| Phase 5 — Outputs and workflow | In progress | Reports, specifications, comparison, and pipeline complete; exports are next |
 | Phase 6 — Hardening | Backlog | Expanded tests, migrations, logging, performance, and UI polish |
 
 ## In progress
 
-No active card. Start with `P5-PIPELINE-01`.
+No active card. Start with `P5-EXPORT-01`.
 
 ## Ready
 
-### P5-PIPELINE-01 — Status controls and pipeline view
+### P5-EXPORT-01 — Traceable CSV and JSON exports
 
 - **Priority:** P1
-- **Deliverable:** Manage niche workflow status and review the project pipeline without leaving the app.
+- **Deliverable:** Download useful research and decision data without losing identifiers, provenance, or uncertainty context.
 - **Acceptance criteria:**
-  - Status changes use the defined workflow values and are persisted explicitly.
-  - Pipeline counts and niche rows stay consistent with saved statuses.
-  - Decision context remains visible without turning status into an automatic publish decision.
-- **Dependencies:** Existing niche statuses and Phase 4 decision snapshots.
-- **Verification:** Status-transition, filtering, count-consistency, and Streamlit interaction tests.
+  - CSV and JSON exports expose stable record and snapshot identifiers needed to trace claims back to stored evidence.
+  - Automated score, human-adjusted score, confidence, warnings, and missing values remain distinct.
+  - Export scope and filenames are explicit, and no missing marketplace value is fabricated.
+- **Dependencies:** Phase 2 evidence storage and Phase 4 decision snapshots.
+- **Verification:** Schema, provenance, missing-value, filtering, and Streamlit download tests.
 
 ## Backlog
 
 ### Phase 5 — Outputs and workflow
 
-- `P5-EXPORT-01` — CSV and JSON exports.
+No remaining backlog cards; `P5-EXPORT-01` is ready.
 
 ### Phase 6 — Hardening
 
@@ -236,6 +236,20 @@ Use this section only when a card cannot progress without a user decision, missi
 
 - Forty-four tests pass, including decision-score ordering, missing-score handling, unequal-confidence warnings, metric separation, and Streamlit multiselect interaction.
 - Python compilation completed successfully.
+- Temporary Streamlit server health and root endpoints returned HTTP 200.
+
+### P5-PIPELINE-01 — Status controls and pipeline view
+
+- Pipeline metrics and stage counts cover every defined workflow status, including zero-count stages.
+- Search and status filters retain latest decision context without combining automated score, human adjustment, confidence, UDI, or evidence-warning counts.
+- Manual status changes validate defined status values, require a rationale, and append prior status, new status, rationale, and timestamp to an audit history.
+- Scores and recommendations never change pipeline status automatically, and status changes do not alter score snapshots.
+
+### P5-PIPELINE-VERIFY-01 — Pipeline verification
+
+- Forty-nine tests pass, including persisted transitions, invalid/no-op/unexplained change rejection, history, count consistency, filtering, score/status separation, and Streamlit interaction.
+- Python compilation completed successfully.
+- Additive initialization created the status-transition table in the existing local SQLite database without replacing current data.
 - Temporary Streamlit server health and root endpoints returned HTTP 200.
 
 ## Scope guardrails

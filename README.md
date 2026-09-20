@@ -31,9 +31,10 @@ Implemented:
 - evidence-linked Markdown opportunity reports with in-app preview, download, and snapshot-staleness warnings
 - evidence-grounded book specifications with cited design choices, labeled assumptions, explicit expert-review requirements, and append-only draft history
 - decision-useful niche comparison with separate automated and human-adjusted scores, confidence, UDI, component charts, and evidence-coverage warnings
+- human-controlled pipeline status management with stage counts, decision context, filters, required rationales, and append-only transition history
 - database, scoring, import, cleaning, market-summary, analysis, and Streamlit tests
 
-Pipeline controls and export workflows remain scheduled for later Phase 5 work. See [ARCHITECTURE.md](ARCHITECTURE.md) for design and [KANBAN.md](KANBAN.md) for live execution status.
+CSV and JSON export workflows remain scheduled for the final Phase 5 feature. See [ARCHITECTURE.md](ARCHITECTURE.md) for design and [KANBAN.md](KANBAN.md) for live execution status.
 
 ## Installation
 
@@ -80,6 +81,8 @@ Open the dedicated **Opportunity report** page in the sidebar—or select it fro
 Open **Book specification** in the sidebar to generate a local planning draft from the latest score and evidence. Every product decision is labeled **Evidence-backed**, **Assumption to validate**, or **Risk review required**. The preview and Markdown download include supporting evidence IDs, validation questions, accuracy/rights safeguards, and the source score snapshot. Generating again creates a new draft rather than overwriting history.
 
 Open **Compare** to select two to six niches. The page shows evidence-comparability warnings before ranking, preserves automated and human-adjusted scores as separate fields, and compares confidence, UDI, components, warning counts, and stored coverage inputs. Unscored niches stay visible but are not assigned a rank.
+
+Open **Pipeline** to review counts across every workflow stage, filter niches, and retain their latest decision context. Status changes are manual, require a rationale, and append a transition-history record. Changing a local pipeline status never recalculates a score or publishes, rejects, or archives anything outside this application.
 
 ## Import data
 

@@ -65,3 +65,25 @@ def test_app_dashboard_and_sample_load(monkeypatch, tmp_path) -> None:
     assert not app.exception
     assert len(app.dataframe[0].value) == 2
     assert app.warning or app.success
+
+    app.switch_page("app_pages/pipeline.py").run()
+    assert not app.exception
+    assert app.title[0].value == "Pipeline"
+    assert len(app.metric) == 4
+    assert len(app.dataframe[0].value) == 3
+
+    app.multiselect(key="pipeline_status_filter").set_value(["promising"]).run()
+    assert not app.exception
+    assert len(app.dataframe[0].value) == 1
+    app.multiselect(key="pipeline_status_filter").set_value([]).run()
+    assert not app.exception
+
+    niche_id = app.selectbox(key="pipeline_move_niche").value
+    app.selectbox(key=f"pipeline_new_status_{niche_id}").set_value("validation")
+    app.text_area(key=f"pipeline_status_rationale_{niche_id}").set_value(
+        "Ready for a human validation pass."
+    )
+    next(button for button in app.button if button.label == "Save status change").click().run()
+    assert not app.exception
+    assert app.success
+    assert len(app.dataframe) == 2
