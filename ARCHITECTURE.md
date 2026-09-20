@@ -23,7 +23,7 @@ This keeps business rules out of Streamlit callbacks while avoiding infrastructu
 - `analysis/`: deterministic metrics, clustering, scoring, confidence, and explanations.
 - `llm/`: provider protocol, structured schemas, deterministic mock, and optional OpenAI provider.
 - `services/`: transactions and workflows used by both UI and tests.
-- `pages/`: thin Streamlit render functions.
+- `app_pages/`: thin Streamlit page scripts.
 - `config/`: environment settings and editable scoring configuration.
 
 ## Database schema
@@ -100,10 +100,13 @@ Each normalized factor is divided by 100 before multiplication and the result is
 
 1. **Dashboard** — corpus totals, stage distribution, ranked opportunities, recent analyses, and confidence warnings.
 2. **Research** — create/edit niche, add books, import books/reviews, and run analysis.
-3. **Niche Detail** — overview, competitors, reviews, pain points with evidence, praise, score explanations, concept, raw data, history.
-4. **Compare** — side-by-side scores, confidence, UDI, and only decision-useful charts.
-5. **Pipeline** — status controls for discovered through published, plus rejected/archived.
-6. **Settings** — scoring configuration, LLM provider/model, cost assumptions, and local data status.
+3. **Niche Detail** — overview, competitors, reviews, pain points with evidence, praise, score explanations, reports, concepts, raw data, and history.
+4. **Opportunity report** — deterministic evidence-linked decision report and Markdown download.
+5. **Book specification** — evidence-grounded product brief with assumption and risk labeling.
+6. **Compare** — side-by-side scores, confidence, UDI, and only decision-useful charts.
+7. **Pipeline** — status controls for discovered through published, plus rejected/archived.
+8. **Exports** — explicitly scoped CSV and JSON downloads for decisions, books, and review evidence.
+9. **Settings** — scoring configuration, LLM provider/model, cost assumptions, and local data status.
 
 ## Design issues resolved
 
@@ -115,6 +118,7 @@ Each normalized factor is divided by 100 before multiplication and the result is
 6. **Sentiment versus market insight:** sentiment is only one review field. Problems, desired outcomes, praise, reader level, severity, and content-solvability are first-class structured data.
 7. **Sparse data:** scores may be calculated, but recommendation labels are confidence-gated.
 8. **Changing economics:** royalty, print-cost, and model-cost assumptions are configuration values with an effective date, never hidden constants.
+9. **Portable evidence without lost provenance:** exports include stable database/source/snapshot identifiers, keep automated scores, human adjustments, confidence, warnings, and missing observations separate, and preserve missing values as CSV blanks or JSON nulls.
 
 ## Implementation phases
 
@@ -136,7 +140,7 @@ Full component scoring, confidence, UDI, human overrides, explanations, warnings
 
 ### Phase 5 — outputs and workflow
 
-Opportunity report, evidence-grounded book concept, comparison, pipeline controls, and CSV/JSON/Markdown exports.
+Opportunity report, evidence-grounded book specification, comparison, pipeline controls, and traceable CSV/JSON/Markdown exports.
 
 ### Phase 6 — hardening
 

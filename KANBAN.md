@@ -12,35 +12,34 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 2 — Ingestion and browsing | Done | Reliable manual/CSV/JSON input and evidence browsing |
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
-| Phase 5 — Outputs and workflow | In progress | Reports, specifications, comparison, and pipeline complete; exports are next |
-| Phase 6 — Hardening | Backlog | Expanded tests, migrations, logging, performance, and UI polish |
+| Phase 5 — Outputs and workflow | Done | Reports, specifications, comparison, pipeline, and traceable exports |
+| Phase 6 — Hardening | Ready | Expanded tests, migrations, logging, performance, and UI polish |
 
 ## In progress
 
-No active card. Start with `P5-EXPORT-01`.
+No active card. Start with `P6-TEST-01`.
 
 ## Ready
 
-### P5-EXPORT-01 — Traceable CSV and JSON exports
+### P6-TEST-01 — Full critical-business-logic test matrix
 
 - **Priority:** P1
-- **Deliverable:** Download useful research and decision data without losing identifiers, provenance, or uncertainty context.
+- **Deliverable:** Turn the current scenario and workflow coverage into an explicit regression matrix for every critical V1 business rule.
 - **Acceptance criteria:**
-  - CSV and JSON exports expose stable record and snapshot identifiers needed to trace claims back to stored evidence.
-  - Automated score, human-adjusted score, confidence, warnings, and missing values remain distinct.
-  - Export scope and filenames are explicit, and no missing marketplace value is fabricated.
-- **Dependencies:** Phase 2 evidence storage and Phase 4 decision snapshots.
-- **Verification:** Schema, provenance, missing-value, filtering, and Streamlit download tests.
+  - Import, analysis, scoring, confidence gating, reports, specifications, comparison, pipeline, and exports each have happy-path, boundary, and failure coverage.
+  - Tests preserve the no-fabrication, evidence-traceability, immutable-snapshot, and human-control guardrails.
+  - The matrix identifies remaining gaps before migration, error-handling, performance, and UI-polish work begins.
+- **Dependencies:** Completed Phases 1–5.
+- **Verification:** Full automated suite, coverage inventory, and documented remaining risks.
 
 ## Backlog
 
 ### Phase 5 — Outputs and workflow
 
-No remaining backlog cards; `P5-EXPORT-01` is ready.
+No remaining Phase 5 cards.
 
 ### Phase 6 — Hardening
 
-- `P6-TEST-01` — Full critical-business-logic test matrix.
 - `P6-MIGRATE-01` — Alembic baseline and migration workflow.
 - `P6-ERROR-01` — Structured logging and user-facing error handling.
 - `P6-PERF-01` — Query, batch, and rerun performance review.
@@ -251,6 +250,18 @@ Use this section only when a card cannot progress without a user decision, missi
 - Python compilation completed successfully.
 - Additive initialization created the status-transition table in the existing local SQLite database without replacing current data.
 - Temporary Streamlit server health and root endpoints returned HTTP 200.
+
+### P5-EXPORT-01 — Traceable CSV and JSON exports
+
+- A dedicated Exports page downloads latest niche decisions, competitor books, or review evidence as explicitly named CSV and JSON files.
+- Decision exports preserve score-snapshot IDs, automated and human-adjusted scores, effective decision score, confidence, UDI, warnings, missing observations, weights, explanations, and evidence-coverage inputs as separate fields.
+- Book and review exports preserve stable niche, source, record, market-snapshot, analysis, and derived evidence-link IDs where applicable.
+- CSV leaves missing values blank and represents nested evidence as JSON text; JSON retains native nulls, arrays, and objects and adds a scope and warning manifest.
+
+### P5-EXPORT-VERIFY-01 — Export verification
+
+- Fifty-three tests pass, including latest-snapshot selection, schema, provenance, missing-value preservation, niche filtering, evidence-link IDs, and all three Streamlit export states.
+- Python compilation, repository whitespace validation, and a temporary Streamlit health/root smoke test completed successfully.
 
 ## Scope guardrails
 

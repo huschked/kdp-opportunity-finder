@@ -87,3 +87,26 @@ def test_app_dashboard_and_sample_load(monkeypatch, tmp_path) -> None:
     assert not app.exception
     assert app.success
     assert len(app.dataframe) == 2
+
+    app.switch_page("app_pages/exports.py").run()
+    assert not app.exception
+    assert app.title[0].value == "Exports"
+    assert app.segmented_control(key="export_dataset").value == "decisions"
+    assert app.selectbox(key="export_decision_scope")
+    assert len(app.dataframe[0].value) == 3
+    assert {button.label for button in app.download_button} == {
+        "Download CSV",
+        "Download JSON",
+    }
+
+    app.segmented_control(key="export_dataset").set_value("books").run()
+    assert not app.exception
+    assert app.selectbox(key="export_books_niche")
+    assert len(app.dataframe[0].value) == 10
+    assert len(app.download_button) == 2
+
+    app.segmented_control(key="export_dataset").set_value("reviews").run()
+    assert not app.exception
+    assert app.selectbox(key="export_reviews_niche")
+    assert len(app.dataframe[0].value) == 60
+    assert len(app.download_button) == 2

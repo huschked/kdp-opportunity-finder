@@ -26,6 +26,7 @@ page = st.navigation(
         st.Page("app_pages/concept.py", title="Book specification", icon=":material/auto_stories:"),
         st.Page("app_pages/compare.py", title="Compare", icon=":material/compare_arrows:"),
         st.Page("app_pages/pipeline.py", title="Pipeline", icon=":material/view_kanban:"),
+        st.Page("app_pages/exports.py", title="Exports", icon=":material/download:"),
         st.Page("app_pages/settings.py", title="Settings", icon=":material/settings:"),
     ],
     position="sidebar",
