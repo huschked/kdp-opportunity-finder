@@ -35,7 +35,7 @@ Implemented:
 - traceable CSV and JSON exports for latest niche decisions, competitor books, and review evidence, with explicit scope, stable IDs, provenance, warnings, and missing values
 - database, scoring, import, cleaning, market-summary, analysis, export, and Streamlit tests
 
-Phase 5 is complete. See [ARCHITECTURE.md](ARCHITECTURE.md) for design and [KANBAN.md](KANBAN.md) for live execution status.
+Phase 5 is complete. Phase 6 hardening is underway, beginning with the critical-business-rule matrix in [TEST_MATRIX.md](TEST_MATRIX.md). See [ARCHITECTURE.md](ARCHITECTURE.md) for design and [KANBAN.md](KANBAN.md) for live execution status.
 
 ## Installation
 
@@ -98,6 +98,8 @@ Review imports reference books through `book_identifier`, which must match one u
 ```powershell
 pytest
 ```
+
+See [TEST_MATRIX.md](TEST_MATRIX.md) for the critical-business-rule coverage inventory, protected guardrails, and documented residual risks.
 
 ## Data and configuration
 

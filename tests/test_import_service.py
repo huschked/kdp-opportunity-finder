@@ -98,3 +98,48 @@ Another niche,MATCH-2,Mismatched row
     assert preview.valid_count == 1
     assert preview.rejected_count == 1
     assert preview.issues[0].field == "niche"
+
+
+def test_fully_rejected_import_records_failed_batch_without_creating_books() -> None:
+    session, niche = make_session()
+    preview = ImportService(session).prepare_books(
+        niche_id=niche.id,
+        content=b"source_identifier,title,rating\nBAD-1,Invalid rating,9\n",
+        file_format="csv",
+        filename="rejected-books.csv",
+    )
+
+    assert preview.valid_count == 0
+    assert preview.rejected_count == 1
+    result = ImportService(session).import_books(niche_id=niche.id, preview=preview)
+
+    assert result.status == "failed"
+    assert result.imported_count == 0
+    assert session.scalar(select(func.count(Book.id))) == 0
+    batch = session.get(ImportBatch, result.batch_id)
+    assert batch is not None
+    assert batch.status == "failed"
+    assert batch.errors_json
+
+
+def test_unsupported_or_non_utf8_input_is_reported_without_raising() -> None:
+    session, niche = make_session()
+    service = ImportService(session)
+
+    unsupported = service.prepare_books(
+        niche_id=niche.id,
+        content=b"title\nExample\n",
+        file_format="xlsx",
+        filename="books.xlsx",
+    )
+    non_utf8 = service.prepare_books(
+        niche_id=niche.id,
+        content=b"title\n\xff\xfe\n",
+        file_format="csv",
+        filename="books.csv",
+    )
+
+    assert unsupported.valid_count == 0
+    assert unsupported.issues[0].reason == "Unsupported file format: xlsx"
+    assert non_utf8.valid_count == 0
+    assert non_utf8.issues[0].reason == "File must be UTF-8 encoded"

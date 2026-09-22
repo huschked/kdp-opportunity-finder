@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from llm.openai_provider import OpenAIProvider
 from llm.schemas import ReviewBatchExtraction, ReviewExtraction, ReviewForAnalysis, Sentiment
 
@@ -29,3 +31,8 @@ def test_openai_provider_uses_pydantic_parse_and_captures_usage() -> None:
     assert result.usage.input_tokens == 120
     assert result.usage.output_tokens == 30
     assert completions.request["response_format"] is ReviewBatchExtraction
+
+
+def test_openai_provider_requires_key_before_creating_client() -> None:
+    with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
+        OpenAIProvider(api_key="", model="test-model")

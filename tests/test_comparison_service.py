@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -139,3 +140,15 @@ def test_comparison_flags_sparse_and_materially_unequal_evidence() -> None:
     assert sparse_row.warning_count == 2
     assert sparse_row.missing_observation_count == 1
     assert sparse_row.recommendation == "Needs more data"
+
+
+def test_comparison_rejects_unknown_niche_ids() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        niche = Niche(name="Known niche", seed_keyword="known")
+        session.add(niche)
+        session.flush()
+
+        with pytest.raises(ValueError, match="Niche not found: 999"):
+            compare_niches(session, [niche.id, 999])

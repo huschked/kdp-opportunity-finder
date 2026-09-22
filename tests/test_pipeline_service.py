@@ -169,3 +169,26 @@ def test_pipeline_counts_filters_and_decision_context_stay_separate() -> None:
         assert updated.stage_counts["discovered"] == 0
         assert updated.stage_counts["validation"] == 1
         assert sum(updated.stage_counts.values()) == updated.total_count
+
+
+def test_status_change_rejects_unknown_niche_without_creating_history() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        with pytest.raises(ValueError, match="Niche not found"):
+            change_niche_status(
+                session,
+                niche_id=999,
+                new_status="researching",
+                rationale="Start research.",
+            )
+
+        assert session.scalar(select(func.count(NicheStatusTransition.id))) == 0
+
+
+def test_status_history_requires_positive_limit() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        with pytest.raises(ValueError, match="positive"):
+            status_history(session, limit=0)

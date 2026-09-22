@@ -15,7 +15,22 @@ def test_app_dashboard_and_sample_load(monkeypatch, tmp_path) -> None:
     app = AppTest.from_file(ROOT / "app.py", default_timeout=10).run()
     assert not app.exception
     assert app.title[0].value == "Dashboard"
-    app.button[0].click().run()
+
+    for page_path, page_title in (
+        ("app_pages/niche_detail.py", "Niche detail"),
+        ("app_pages/report.py", "Opportunity report"),
+        ("app_pages/concept.py", "Book specification"),
+        ("app_pages/compare.py", "Compare"),
+        ("app_pages/pipeline.py", "Pipeline"),
+        ("app_pages/exports.py", "Exports"),
+    ):
+        app.switch_page(page_path).run()
+        assert not app.exception
+        assert app.title[0].value == page_title
+        assert app.info
+
+    app.switch_page("app_pages/dashboard.py").run()
+    next(button for button in app.button if button.label == "Load synthetic sample").click().run()
     assert not app.exception
     assert app.metric[0].value == "3"
 

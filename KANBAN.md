@@ -1,6 +1,6 @@
 # KDP Opportunity Finder — Kanban
 
-Last updated: 2026-09-19
+Last updated: 2026-09-21
 
 This board tracks execution. `ARCHITECTURE.md` remains the authority for system design, data relationships, and scope decisions.
 
@@ -13,24 +13,25 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
 | Phase 5 — Outputs and workflow | Done | Reports, specifications, comparison, pipeline, and traceable exports |
-| Phase 6 — Hardening | Ready | Expanded tests, migrations, logging, performance, and UI polish |
+| Phase 6 — Hardening | In progress | Critical test matrix complete; migrations are next |
 
 ## In progress
 
-No active card. Start with `P6-TEST-01`.
+No active card. Start with `P6-MIGRATE-01`.
 
 ## Ready
 
-### P6-TEST-01 — Full critical-business-logic test matrix
+### P6-MIGRATE-01 — Alembic baseline and migration workflow
 
 - **Priority:** P1
-- **Deliverable:** Turn the current scenario and workflow coverage into an explicit regression matrix for every critical V1 business rule.
+- **Deliverable:** Replace ad hoc schema evolution with a repeatable Alembic workflow that protects existing local data.
 - **Acceptance criteria:**
-  - Import, analysis, scoring, confidence gating, reports, specifications, comparison, pipeline, and exports each have happy-path, boundary, and failure coverage.
-  - Tests preserve the no-fabrication, evidence-traceability, immutable-snapshot, and human-control guardrails.
-  - The matrix identifies remaining gaps before migration, error-handling, performance, and UI-polish work begins.
-- **Dependencies:** Completed Phases 1–5.
-- **Verification:** Full automated suite, coverage inventory, and documented remaining risks.
+  - Alembic configuration and a reviewed baseline represent the current SQLAlchemy schema.
+  - A fresh database upgrades to the current schema, while an existing current-schema database can be stamped without destructive recreation.
+  - Startup and contributor documentation explain upgrade, revision, backup, and recovery steps.
+  - Migration tests run only against temporary databases and verify version state plus representative stored data.
+- **Dependencies:** `P6-TEST-01`.
+- **Verification:** Fresh upgrade, populated-database stamp/upgrade, schema comparison, full regression suite, and documented recovery boundary.
 
 ## Backlog
 
@@ -40,7 +41,6 @@ No remaining Phase 5 cards.
 
 ### Phase 6 — Hardening
 
-- `P6-MIGRATE-01` — Alembic baseline and migration workflow.
 - `P6-ERROR-01` — Structured logging and user-facing error handling.
 - `P6-PERF-01` — Query, batch, and rerun performance review.
 - `P6-UI-01` — Accessibility, responsive layout, empty states, and visual cleanup.
@@ -262,6 +262,19 @@ Use this section only when a card cannot progress without a user decision, missi
 
 - Fifty-three tests pass, including latest-snapshot selection, schema, provenance, missing-value preservation, niche filtering, evidence-link IDs, and all three Streamlit export states.
 - Python compilation, repository whitespace validation, and a temporary Streamlit health/root smoke test completed successfully.
+
+### P6-TEST-01 — Full critical-business-logic test matrix
+
+- `TEST_MATRIX.md` maps every critical V1 workflow to happy-path, boundary/uncertainty, and failure/guardrail evidence.
+- The suite adds explicit protection for rejected writes, duplicate records, invalid human overrides, cross-niche isolation, missing prerequisites, provider failure atomicity, and empty Streamlit page states.
+- No-fabrication, evidence-provenance, immutable-history, human-control, failure-atomicity, and cross-niche-isolation guardrails are traceable to named tests.
+- Residual live-provider, browser/accessibility, migration/concurrency, scale, and operational-diagnostics risks are assigned to later Phase 6 cards.
+
+### P6-TEST-VERIFY-01 — Test-matrix verification
+
+- Seventy-three tests pass, up from fifty-three before the hardening card.
+- Python compilation and repository whitespace validation pass.
+- AppTest covers empty and seeded top-level workflows through `app.py`; a temporary Streamlit server returned HTTP 200 for health and root endpoints.
 
 ## Scope guardrails
 

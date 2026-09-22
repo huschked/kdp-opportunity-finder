@@ -100,3 +100,16 @@ def test_report_requires_a_current_explainable_score_snapshot() -> None:
     session.flush()
     with pytest.raises(ValueError, match="Calculate a score snapshot"):
         generate_opportunity_report(session, niche_id=niche.id)
+
+
+def test_report_rejects_snapshot_from_another_niche(sample_session) -> None:
+    niches = list(sample_session.scalars(select(Niche).order_by(Niche.id)))
+    wrong_snapshot = ScoreRepository(sample_session).latest_for_niche(niches[1].id)
+    assert wrong_snapshot is not None
+
+    with pytest.raises(ValueError, match="Calculate a score snapshot"):
+        generate_opportunity_report(
+            sample_session,
+            niche_id=niches[0].id,
+            snapshot_id=wrong_snapshot.id,
+        )

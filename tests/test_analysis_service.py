@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import sessionmaker
 
@@ -123,3 +124,37 @@ def test_provider_failure_records_failed_run_without_replacing_current_analysis(
     assert all(item.analysis_run_id == completed.run_id for item in after)
     failed = session.scalar(select(AnalysisRun).where(AnalysisRun.status == "failed"))
     assert failed and "simulated provider failure" in failed.error_message
+
+
+def test_analysis_rejects_niche_without_reviews_before_creating_run() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine, expire_on_commit=False)()
+    niche = Niche(name="Empty evidence niche", seed_keyword="empty")
+    session.add(niche)
+    session.commit()
+
+    with pytest.raises(ValueError, match="no reviews"):
+        analyze_niche_reviews(session, niche_id=niche.id, provider=MockProvider())
+
+    assert session.scalar(select(func.count(AnalysisRun.id))) == 0
+
+
+def test_human_merge_rejects_cross_niche_groups_without_deleting_evidence() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine, expire_on_commit=False)()
+    first_niche = Niche(name="First evidence niche", seed_keyword="first")
+    second_niche = Niche(name="Second evidence niche", seed_keyword="second")
+    session.add_all([first_niche, second_niche])
+    session.flush()
+    source = PainPoint(niche_id=first_niche.id, canonical_name="First pain")
+    target = PainPoint(niche_id=second_niche.id, canonical_name="Second pain")
+    session.add_all([source, target])
+    session.commit()
+
+    with pytest.raises(ValueError, match="same niche"):
+        merge_pain_points(session, source_id=source.id, target_id=target.id)
+
+    assert session.get(PainPoint, source.id) is not None
+    assert session.get(PainPoint, target.id) is not None

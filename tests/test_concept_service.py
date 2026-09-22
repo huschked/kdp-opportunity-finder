@@ -119,3 +119,16 @@ def test_validator_rejects_uncited_claims_disguised_as_evidence() -> None:
     }
     with pytest.raises(ValueError, match="must cite evidence"):
         validate_book_specification(payload, [{"ref": "S1"}])
+
+
+def test_specification_requires_a_score_snapshot(sample_session) -> None:
+    niche = Niche(name="Unscored specification niche", seed_keyword="unscored spec")
+    sample_session.add(niche)
+    sample_session.commit()
+
+    with pytest.raises(ValueError, match="Calculate a score snapshot"):
+        generate_book_specification(sample_session, niche_id=niche.id)
+
+    assert not sample_session.scalars(
+        select(BookConcept).where(BookConcept.niche_id == niche.id)
+    ).all()
