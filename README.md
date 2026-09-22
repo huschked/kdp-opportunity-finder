@@ -4,7 +4,7 @@ A local, evidence-first research application for comparing nonfiction publishing
 
 This is not a book generator, sales predictor, or Amazon scraper. V1 begins with manual/synthetic data and preserves the source behind every claim.
 
-## Implemented through Phase 5
+## Implemented through Phase 6 hardening (in progress)
 
 Implemented:
 
@@ -33,9 +33,11 @@ Implemented:
 - decision-useful niche comparison with separate automated and human-adjusted scores, confidence, UDI, component charts, and evidence-coverage warnings
 - human-controlled pipeline status management with stage counts, decision context, filters, required rationales, and append-only transition history
 - traceable CSV and JSON exports for latest niche decisions, competitor books, and review evidence, with explicit scope, stable IDs, provenance, warnings, and missing values
+- a critical-business-rule test matrix covering uncertainty, rejected writes, immutable evidence history, failure atomicity, and cross-niche isolation
+- Alembic-managed schema startup with a reviewed baseline, safe adoption of matching local databases, and refusal of incompatible unversioned schemas
 - database, scoring, import, cleaning, market-summary, analysis, export, and Streamlit tests
 
-Phase 5 is complete. Phase 6 hardening is underway, beginning with the critical-business-rule matrix in [TEST_MATRIX.md](TEST_MATRIX.md). See [ARCHITECTURE.md](ARCHITECTURE.md) for design and [KANBAN.md](KANBAN.md) for live execution status.
+Phase 5 is complete. Phase 6 hardening is underway. See [TEST_MATRIX.md](TEST_MATRIX.md) for guarded behavior, [MIGRATIONS.md](MIGRATIONS.md) for the safe database workflow, [ARCHITECTURE.md](ARCHITECTURE.md) for design, and [KANBAN.md](KANBAN.md) for live execution status.
 
 ## Installation
 
@@ -54,6 +56,8 @@ Copy `.env.example` to `.env` if you want to change defaults. No API key is need
 ```powershell
 streamlit run app.py
 ```
+
+Startup automatically upgrades an empty or versioned database to the current Alembic revision. A legacy database is stamped only after its schema matches the reviewed baseline; no application records are recreated. Back up local data before any schema work and follow [MIGRATIONS.md](MIGRATIONS.md).
 
 Use **Load synthetic sample** in the sidebar to create three deliberately different scenarios:
 
@@ -105,6 +109,7 @@ See [TEST_MATRIX.md](TEST_MATRIX.md) for the critical-business-rule coverage inv
 
 - Default database: `kdp_opportunity_finder.db` in the project root.
 - Override with `KDP_DATABASE_URL` in `.env`.
+- Schema revisions and backup/recovery workflow: [MIGRATIONS.md](MIGRATIONS.md).
 - Scoring weights and targets: `config/scoring.yaml`; the six weights must total 1.0 and each snapshot stores the exact policy used.
 - LLM provider: `KDP_LLM_PROVIDER=mock` by default.
 

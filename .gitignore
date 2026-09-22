@@ -5,5 +5,8 @@ __pycache__/
 .pytest_cache/
 .streamlit/secrets.toml
 kdp_opportunity_finder.db
+backups/*.db
+backups/*.db-wal
+backups/*.db-shm
 exports/*
 !exports/.gitkeep

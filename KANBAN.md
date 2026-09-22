@@ -13,25 +13,25 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
 | Phase 5 — Outputs and workflow | Done | Reports, specifications, comparison, pipeline, and traceable exports |
-| Phase 6 — Hardening | In progress | Critical test matrix complete; migrations are next |
+| Phase 6 — Hardening | In progress | Critical test matrix and guarded Alembic migrations complete; error handling is next |
 
 ## In progress
 
-No active card. Start with `P6-MIGRATE-01`.
+No active card.
 
 ## Ready
 
-### P6-MIGRATE-01 — Alembic baseline and migration workflow
+### P6-ERROR-01 — Structured logging and user-facing error handling
 
 - **Priority:** P1
-- **Deliverable:** Replace ad hoc schema evolution with a repeatable Alembic workflow that protects existing local data.
+- **Deliverable:** Make operational failures diagnosable without exposing secrets or replacing evidence, and give users a clear recovery action in the UI.
 - **Acceptance criteria:**
-  - Alembic configuration and a reviewed baseline represent the current SQLAlchemy schema.
-  - A fresh database upgrades to the current schema, while an existing current-schema database can be stamped without destructive recreation.
-  - Startup and contributor documentation explain upgrade, revision, backup, and recovery steps.
-  - Migration tests run only against temporary databases and verify version state plus representative stored data.
-- **Dependencies:** `P6-TEST-01`.
-- **Verification:** Fresh upgrade, populated-database stamp/upgrade, schema comparison, full regression suite, and documented recovery boundary.
+  - Application logging has a consistent local format and useful operation context without API keys or full review text.
+  - Expected import, provider, scoring, export, and schema failures produce concise user-facing guidance while retaining diagnostic detail in logs.
+  - Unexpected page failures are contained where recovery is possible and do not turn partial work into a successful result.
+  - Tests verify log context, redaction, recovery messages, and unchanged data after representative failures.
+- **Dependencies:** `P6-MIGRATE-01`.
+- **Verification:** Targeted failure-path tests, full regression suite, log inspection, and running-app recovery smoke test.
 
 ## Backlog
 
@@ -41,7 +41,6 @@ No remaining Phase 5 cards.
 
 ### Phase 6 — Hardening
 
-- `P6-ERROR-01` — Structured logging and user-facing error handling.
 - `P6-PERF-01` — Query, batch, and rerun performance review.
 - `P6-UI-01` — Accessibility, responsive layout, empty states, and visual cleanup.
 - `P6-DOCS-01` — Final README, import references, limitations, and roadmap.
@@ -268,13 +267,28 @@ Use this section only when a card cannot progress without a user decision, missi
 - `TEST_MATRIX.md` maps every critical V1 workflow to happy-path, boundary/uncertainty, and failure/guardrail evidence.
 - The suite adds explicit protection for rejected writes, duplicate records, invalid human overrides, cross-niche isolation, missing prerequisites, provider failure atomicity, and empty Streamlit page states.
 - No-fabrication, evidence-provenance, immutable-history, human-control, failure-atomicity, and cross-niche-isolation guardrails are traceable to named tests.
-- Residual live-provider, browser/accessibility, migration/concurrency, scale, and operational-diagnostics risks are assigned to later Phase 6 cards.
+- Residual live-provider, browser/accessibility, concurrency, scale, and operational-diagnostics risks are assigned to later Phase 6 cards.
 
 ### P6-TEST-VERIFY-01 — Test-matrix verification
 
 - Seventy-three tests pass, up from fifty-three before the hardening card.
 - Python compilation and repository whitespace validation pass.
 - AppTest covers empty and seeded top-level workflows through `app.py`; a temporary Streamlit server returned HTTP 200 for health and root endpoints.
+
+### P6-MIGRATE-01 — Alembic baseline and migration workflow
+
+- Alembic configuration, application metadata integration, and explicit upgrade/downgrade operations establish revision `20260921_0001` as the reviewed current-schema baseline.
+- Startup upgrades empty and versioned databases, stamps only an exact unversioned schema match, and refuses partial or unexpected unversioned schemas without changing them.
+- The existing local database was stamped without recreating its application tables; its 4 niches, 32 books, 181 reviews, 14 score snapshots, and 1 status transition remained intact.
+- `MIGRATIONS.md` documents backup hashing, status and upgrade commands, revision review, verification, and the no-downgrade recovery boundary.
+- A byte-identical local database backup is retained under ignored `backups/` storage.
+
+### P6-MIGRATE-VERIFY-01 — Migration workflow verification
+
+- Seventy-six tests pass, including fresh upgrade, idempotent startup, exact metadata comparison, populated legacy-schema adoption, data preservation, and incompatible-schema refusal.
+- Python compilation and repository whitespace validation pass.
+- Alembic reports revision `20260921_0001 (head)`, and the direct bootstrap reports the database is current.
+- A temporary Streamlit server returned HTTP 200 for health and root endpoints after the migration startup change.
 
 ## Scope guardrails
 

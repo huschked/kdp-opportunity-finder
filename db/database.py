@@ -9,7 +9,7 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from config.settings import get_settings
-from models import Base
+from db.migrations import MigrationResult, ensure_database_schema
 
 
 def build_engine(database_url: str | None = None) -> Engine:
@@ -31,13 +31,15 @@ ENGINE = build_engine()
 SessionLocal = sessionmaker(bind=ENGINE, expire_on_commit=False)
 
 
-def initialize_database(engine: Engine = ENGINE) -> None:
-    Base.metadata.create_all(engine)
+def initialize_database(engine: Engine | None = None) -> MigrationResult:
+    return ensure_database_schema(engine or ENGINE)
 
 
 @contextmanager
-def session_scope(session_factory: sessionmaker[Session] = SessionLocal) -> Iterator[Session]:
-    session = session_factory()
+def session_scope(
+    session_factory: sessionmaker[Session] | None = None,
+) -> Iterator[Session]:
+    session = (session_factory or SessionLocal)()
     try:
         yield session
         session.commit()
@@ -46,4 +48,3 @@ def session_scope(session_factory: sessionmaker[Session] = SessionLocal) -> Iter
         raise
     finally:
         session.close()
-

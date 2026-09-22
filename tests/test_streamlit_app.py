@@ -1,5 +1,7 @@
+import importlib
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 from config.settings import get_settings
@@ -8,10 +10,25 @@ from config.settings import get_settings
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_app_dashboard_and_sample_load(monkeypatch, tmp_path) -> None:
+@pytest.fixture
+def isolated_streamlit_database(monkeypatch, tmp_path):
     database_path = tmp_path / "streamlit_test.db"
     monkeypatch.setenv("KDP_DATABASE_URL", f"sqlite:///{database_path.as_posix()}")
     get_settings.cache_clear()
+
+    import db.database as database_module
+
+    database_module.ENGINE.dispose()
+    importlib.reload(database_module)
+    yield database_path
+
+    database_module.ENGINE.dispose()
+    monkeypatch.undo()
+    get_settings.cache_clear()
+    importlib.reload(database_module)
+
+
+def test_app_dashboard_and_sample_load(isolated_streamlit_database) -> None:
     app = AppTest.from_file(ROOT / "app.py", default_timeout=10).run()
     assert not app.exception
     assert app.title[0].value == "Dashboard"

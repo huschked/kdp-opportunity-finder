@@ -1,0 +1,8 @@
+Alembic migration environment for KDP Opportunity Finder.
+
+Create revisions from the project root and review generated operations before applying them:
+
+    .\.venv\Scripts\python.exe -m alembic revision --autogenerate -m "describe change"
+    .\.venv\Scripts\python.exe -m alembic upgrade head
+
+See MIGRATIONS.md for the safe workflow for existing local databases.
