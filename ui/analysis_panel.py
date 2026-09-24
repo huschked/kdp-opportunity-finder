@@ -7,6 +7,7 @@ from db.database import session_scope
 from llm.base import ProviderContractError
 from services.analysis_service import analyze_niche_reviews
 from ui.errors import render_operation_error
+from ui.layout import render_empty_state
 
 
 def _analysis_error_message(error: BaseException) -> tuple[str, str, bool]:
@@ -37,20 +38,38 @@ def _analysis_error_message(error: BaseException) -> tuple[str, str, bool]:
 
 
 def render_analysis_panel(niches: list[object]) -> None:
-    st.subheader("Analyze review evidence")
+    st.subheader("Analyze review evidence", icon=":material/psychology:")
     st.caption(
         "Extract pain points, praised features, desired outcomes, and evidence. "
         "Mock mode is deterministic and free; OpenAI is opt-in."
     )
     if not niches:
-        st.info("Create a niche and import reviews before running analysis.")
+        render_empty_state(
+            title="No niche available for analysis",
+            body="Review analysis extracts structured evidence while preserving every source review.",
+            next_step="Create a niche, add a competitor book, and import reviews first.",
+            icon="psychology",
+        )
         return
     by_id = {item.id: item for item in niches}
     settings = get_settings()
     with st.form("analysis_form"):
         niche_id = st.selectbox("Niche", list(by_id), format_func=lambda value: by_id[value].name)
-        provider_name = st.radio("Provider", ("mock", "openai"), horizontal=True, index=0 if settings.llm_provider == "mock" else 1)
-        batch_size = st.number_input("Reviews per batch", min_value=1, max_value=50, value=settings.llm_batch_size)
+        provider_name = st.segmented_control(
+            "Analysis provider",
+            ("mock", "openai"),
+            default=settings.llm_provider if settings.llm_provider in {"mock", "openai"} else "mock",
+            required=True,
+            format_func=lambda value: "Mock · local" if value == "mock" else "OpenAI · API",
+            help="Mock mode is deterministic and free. OpenAI requires a configured API key and API credits.",
+        )
+        batch_size = st.number_input(
+            "Reviews per batch",
+            min_value=1,
+            max_value=50,
+            value=settings.llm_batch_size,
+            help="Provider requests are always capped at 50 reviews; smaller batches provide more progress updates.",
+        )
         force = st.checkbox("Force reanalysis", help="Ignore valid cached review results and analyze every review again.")
         submitted = st.form_submit_button("Analyze reviews", type="primary", icon=":material/psychology:")
     if not submitted:

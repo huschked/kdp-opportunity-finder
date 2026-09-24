@@ -21,6 +21,7 @@ from services.export_service import (
     render_export_json,
 )
 from ui.errors import render_operation_error
+from ui.layout import render_empty_state
 
 
 def _preview_frame(dataset: ExportDataset) -> pd.DataFrame:
@@ -93,7 +94,12 @@ except Exception as exc:
     st.stop()
 
 if not niches:
-    st.info("Add a niche or load the synthetic sample before creating an export.")
+    render_empty_state(
+        title="No research available to export",
+        body="Exports preserve stored IDs, provenance, missing values, and evidence warnings without inventing records.",
+        next_step="Create a niche in Research or load the synthetic sample from the sidebar.",
+        icon="download",
+    )
     st.stop()
 
 export_type = st.segmented_control(
@@ -165,14 +171,14 @@ scope_name = (
     else f"{dataset.scope['niche_name']} · N{dataset.scope['niche_id']}"
 )
 with st.container(horizontal=True):
-    st.metric("Records", dataset.record_count, border=True)
-    st.metric("Scope", scope_name, border=True)
-    st.metric("Columns", len(dataset.columns), border=True)
+    st.metric("Records", dataset.record_count, border=True, icon=":material/table_rows:")
+    st.metric("Scope", scope_name, border=True, icon=":material/filter_alt:")
+    st.metric("Columns", len(dataset.columns), border=True, icon=":material/view_column:")
 
 for warning in dataset.dataset_warnings:
     st.warning(warning)
 
-st.subheader("Preview")
+st.subheader("Preview", icon=":material/preview:")
 st.caption(
     "The preview shows selected high-value columns and at most 100 records. Downloads contain the full declared schema."
 )
@@ -183,7 +189,12 @@ if dataset.records:
         key=f"export_preview_{export_type}",
     )
 else:
-    st.info("This export is valid but contains no records for the selected scope.")
+    render_empty_state(
+        title="The selected export is empty",
+        body="The scope is valid, but no stored records meet its declared dataset rules.",
+        next_step="Choose another scope or add the required evidence before downloading.",
+        icon="inventory_2",
+    )
 
 try:
     csv_data = render_export_csv(dataset)
@@ -204,7 +215,7 @@ except Exception as exc:
 csv_filename = dataset.filename("csv")
 json_filename = dataset.filename("json")
 
-st.subheader("Download")
+st.subheader("Download", icon=":material/download:")
 with st.container(horizontal=True):
     st.download_button(
         "Download CSV",
@@ -228,7 +239,7 @@ with st.container(horizontal=True):
     )
 st.caption(f"Files: `{csv_filename}` and `{json_filename}`")
 
-with st.expander("Schema and safeguards"):
+with st.expander("Schema and safeguards", icon=":material/shield:"):
     st.write(MISSING_VALUE_POLICY)
     st.write(
         "CSV stores nested warnings, explanations, and evidence links as JSON text. JSON preserves them as native "

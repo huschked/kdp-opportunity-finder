@@ -16,6 +16,7 @@ from services.pipeline_service import (
     status_history,
 )
 from ui.errors import render_operation_error
+from ui.layout import render_empty_state
 
 
 def _pipeline_frame(rows: tuple[PipelineRow, ...]) -> pd.DataFrame:
@@ -54,21 +55,27 @@ with session_scope() as session:
     history_rows = status_history(session, limit=50)
 
 if not full_pipeline.total_count:
-    st.info("Add a niche or load the synthetic sample before using the pipeline.")
+    render_empty_state(
+        title="The pipeline is empty",
+        body="Pipeline stages are manual workflow labels and never change automatically from a score.",
+        next_step="Create a niche in Research or load the synthetic sample from the sidebar.",
+        icon="view_kanban",
+    )
     st.stop()
 
 with st.container(horizontal=True):
-    st.metric("Total niches", full_pipeline.total_count, border=True)
-    st.metric("Active workflow", full_pipeline.active_count, border=True)
-    st.metric("Published", full_pipeline.stage_counts.get("published", 0), border=True)
+    st.metric("Total niches", full_pipeline.total_count, border=True, icon=":material/topic:")
+    st.metric("Active workflow", full_pipeline.active_count, border=True, icon=":material/pending_actions:")
+    st.metric("Published", full_pipeline.stage_counts.get("published", 0), border=True, icon=":material/publish:")
     st.metric(
         "Rejected or archived",
         full_pipeline.stage_counts.get("rejected", 0)
         + full_pipeline.stage_counts.get("archived", 0),
         border=True,
+        icon=":material/archive:",
     )
 
-st.subheader("Pipeline stages")
+st.subheader("Pipeline stages", icon=":material/view_kanban:")
 stage_frame = pd.DataFrame(
     [
         {"Stage": STATUS_LABELS[status], "Niches": full_pipeline.stage_counts.get(status, 0)}
@@ -82,7 +89,7 @@ stage_frame["Stage"] = pd.Categorical(
 )
 st.bar_chart(stage_frame, x="Stage", y="Niches", sort=False, height=300)
 
-st.subheader("Niches")
+st.subheader("Niches", icon=":material/table_rows:")
 with st.form("pipeline_filters", border=False):
     filter_columns = st.columns([1, 2])
     with filter_columns[0]:
@@ -133,9 +140,14 @@ if filtered_pipeline.rows:
         },
     )
 else:
-    st.info("No niches match the current pipeline filters.")
+    render_empty_state(
+        title="No niches match these filters",
+        body="The pipeline data is unchanged; the submitted search and status filters returned no rows.",
+        next_step="Clear the search text or selected statuses and apply the filters again.",
+        icon="filter_alt_off",
+    )
 
-st.subheader("Record a status change")
+st.subheader("Record a status change", icon=":material/edit_note:")
 st.caption(
     "This updates only the local workflow label. It does not publish, reject, score, or otherwise change a book decision."
 )
@@ -147,7 +159,14 @@ selected_niche_id = st.selectbox(
     key="pipeline_move_niche",
 )
 selected_row = row_by_id[selected_niche_id]
-st.info(f"Current status: **{selected_row.status_label}**")
+with st.container(horizontal=True, vertical_alignment="center"):
+    st.caption("Current workflow status")
+    st.badge(
+        selected_row.status_label,
+        icon=":material/label:",
+        color="primary",
+        help="This is a human-controlled workflow label, not an automated recommendation.",
+    )
 
 with st.form("pipeline_status_change", clear_on_submit=True):
     new_status = st.selectbox(
@@ -194,7 +213,7 @@ if submitted:
         )
         st.rerun()
 
-st.subheader("Status history")
+st.subheader("Status history", icon=":material/history:")
 if history_rows:
     history_frame = pd.DataFrame(
         [
@@ -219,4 +238,9 @@ if history_rows:
         },
     )
 else:
-    st.info("No status changes have been recorded yet.")
+    render_empty_state(
+        title="No status changes recorded",
+        body="The current niche labels still appear above; this history begins with the first manual transition.",
+        next_step="Choose a niche, select a different status, and record the rationale.",
+        icon="history",
+    )

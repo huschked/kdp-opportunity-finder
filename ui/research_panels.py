@@ -24,6 +24,7 @@ from services.book_service import BookService
 from services.import_service import ImportPreview, ImportService
 from services.niche_service import NicheNameConflict, NicheService
 from ui.errors import render_operation_error
+from ui.layout import render_empty_state
 
 
 def load_niches() -> list[Niche]:
@@ -33,7 +34,12 @@ def load_niches() -> list[Niche]:
 
 def select_niche(niches: list[Niche], *, key: str) -> Niche | None:
     if not niches:
-        st.info("Create a niche before adding market evidence.")
+        render_empty_state(
+            title="No niche available",
+            body="Competitor and review evidence must belong to a specific research hypothesis.",
+            next_step="Choose Create niche from the Research task selector.",
+            icon="science",
+        )
         return None
     by_id = {niche.id: niche for niche in niches}
     selected_id = st.selectbox(
@@ -47,7 +53,7 @@ def select_niche(niches: list[Niche], *, key: str) -> Niche | None:
 
 
 def render_create_niche() -> None:
-    st.subheader("Create a niche hypothesis")
+    st.subheader("Create a niche hypothesis", icon=":material/add_circle:")
     st.caption("A niche starts as a hypothesis. Add observed books and reviews before treating it as evidence.")
     with st.form("create_niche", clear_on_submit=True):
         name = st.text_input("Niche name", max_chars=250)
@@ -112,7 +118,7 @@ def _book_form_values(book: Book | None, prefix: str) -> tuple[bool, dict[str, A
                 "Review count", min_value=0, value=_number_default(book.review_count if book else None), step=1
             )
             best_seller_rank = st.number_input(
-                "Best Seller Rank", min_value=1, value=_number_default(book.best_seller_rank if book else None), step=1
+                "Best seller rank", min_value=1, value=_number_default(book.best_seller_rank if book else None), step=1
             )
         source_col, id_col, asin_col = st.columns(3)
         with source_col:
@@ -158,7 +164,7 @@ def _book_form_values(book: Book | None, prefix: str) -> tuple[bool, dict[str, A
 
 
 def render_manual_book(niches: list[Niche]) -> None:
-    st.subheader("Add or edit a competitor")
+    st.subheader("Add or edit a competitor", icon=":material/library_add:")
     niche = select_niche(niches, key="manual_book_niche")
     if niche is None:
         return
@@ -170,7 +176,12 @@ def render_manual_book(niches: list[Niche]) -> None:
         with session_scope() as session:
             books = BookRepository(session).list_by_niche(niche.id)
         if not books:
-            st.info("This niche has no books to edit.")
+            render_empty_state(
+                title="No competitor books to edit",
+                body="This niche does not yet contain a competitor observation.",
+                next_step="Switch the action to Add book and save the first record.",
+                icon="library_add",
+            )
             return
         by_id = {item.id: item for item in books}
         selected_id = st.selectbox(
@@ -222,10 +233,10 @@ def _template_buttons(entity: Literal["book", "review"]) -> None:
 
 
 def _show_preview(preview: ImportPreview[Any]) -> None:
-    first, second, third = st.columns(3)
-    first.metric("Rows processed", preview.processed_count)
-    second.metric("Ready to import", preview.valid_count)
-    third.metric("Rejected", preview.rejected_count)
+    with st.container(horizontal=True):
+        st.metric("Rows processed", preview.processed_count, border=True, icon=":material/table_rows:")
+        st.metric("Ready to import", preview.valid_count, border=True, icon=":material/check_circle:")
+        st.metric("Rejected", preview.rejected_count, border=True, icon=":material/error:")
     if preview.valid_rows:
         st.caption("Validated rows")
         st.dataframe(pd.DataFrame(preview.preview_rows()), hide_index=True, key=f"{preview.entity_type}_preview")
@@ -237,7 +248,7 @@ def _show_preview(preview: ImportPreview[Any]) -> None:
 
 def render_import(niches: list[Niche], entity: Literal["book", "review"]) -> None:
     label = "books" if entity == "book" else "reviews"
-    st.subheader(f"Import {label}")
+    st.subheader(f"Import {label}", icon=":material/upload_file:")
     niche = select_niche(niches, key=f"import_{entity}_niche")
     if niche is None:
         return
@@ -310,7 +321,7 @@ def render_import(niches: list[Niche], entity: Literal["book", "review"]) -> Non
                 "status": "ready" if preview.valid_count else "rejected",
             },
         )
-    st.divider()
+    st.subheader("Validation result", icon=":material/fact_check:")
     _show_preview(preview)
     if st.button(
         f"Import {preview.valid_count} valid {label}", type="primary", icon=":material/upload:",

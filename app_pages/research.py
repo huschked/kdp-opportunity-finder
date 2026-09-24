@@ -10,6 +10,7 @@ from ui.research_panels import (
     render_manual_book,
 )
 from ui.analysis_panel import render_analysis_panel
+from ui.layout import render_empty_state
 
 
 st.caption("Create hypotheses, then add observed competitor and review evidence.")
@@ -48,13 +49,25 @@ elif mode == "Import reviews":
 else:
     render_analysis_panel(niches)
 
-st.divider()
-st.subheader("Research library")
+st.subheader("Research library", icon=":material/folder_open:")
 rows = [
     {"Niche": item.name, "Seed": item.seed_keyword, "Status": item.status.title(), "Updated": item.updated_at}
     for item in niches
 ]
 if rows:
-    st.dataframe(pd.DataFrame(rows), hide_index=True, key="research_library")
+    st.dataframe(
+        pd.DataFrame(rows),
+        hide_index=True,
+        key="research_library",
+        column_config={
+            "Niche": st.column_config.TextColumn(pinned=True),
+            "Updated": st.column_config.DatetimeColumn(format="MMM DD, YYYY · h:mm a"),
+        },
+    )
 else:
-    st.info("No niches have been created.")
+    render_empty_state(
+        title="No research niches yet",
+        body="A niche begins as a hypothesis and stays separate from observed market evidence.",
+        next_step="Choose Create niche above and record a name plus seed keyword.",
+        icon="science",
+    )

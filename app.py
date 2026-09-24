@@ -73,7 +73,7 @@ page = st.navigation(
 )
 
 with st.sidebar:
-    st.divider()
+    st.caption("Sample workspace")
     if st.button("Load synthetic sample", width="stretch", icon=":material/database:"):
         try:
             with session_scope() as session:

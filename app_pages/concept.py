@@ -5,13 +5,19 @@ import streamlit as st
 from db.database import session_scope
 from db.repositories import NicheRepository
 from ui.concept_views import render_book_specification_view
+from ui.layout import render_empty_state
 
 
 with session_scope() as session:
     niches = NicheRepository(session).list_all()
 
 if not niches:
-    st.info("Create a niche and calculate a decision score before generating a book specification.")
+    render_empty_state(
+        title="No niche available for a specification",
+        body="A specification draft requires a stored niche and its latest evidence-backed decision snapshot.",
+        next_step="Create a niche in Research, collect evidence, and calculate a decision score.",
+        icon="auto_stories",
+    )
     st.stop()
 
 niches_by_id = {niche.id: niche for niche in niches}

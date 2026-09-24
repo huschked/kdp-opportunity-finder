@@ -9,6 +9,7 @@ from db.database import session_scope
 from db.repositories import ConceptRepository, ScoreRepository
 from services.concept_service import generate_book_specification, render_book_specification
 from ui.errors import render_operation_error
+from ui.layout import render_empty_state
 
 
 def render_book_specification_view(niche_id: int) -> None:
@@ -44,19 +45,27 @@ def render_book_specification_view(niche_id: int) -> None:
         score = ScoreRepository(session).latest_for_niche(niche_id)
 
     if latest is None:
-        st.info("No specification exists yet. Calculate a current decision score, then generate the first draft.")
+        render_empty_state(
+            title="No specification draft yet",
+            body="A specification labels every design choice as evidence-backed, an assumption to validate, or a risk requiring review.",
+            next_step="Calculate a current decision score, then select Generate new specification.",
+            icon="auto_stories",
+        )
         return
 
     artifact = render_book_specification(latest)
     if score is not None and score.id != artifact.snapshot_id:
         st.warning(
-            f"A newer score snapshot exists (S{score.id}); this specification uses S{artifact.snapshot_id}. Generate a new specification before relying on it."
+            f"A newer score snapshot exists (S{score.id}); this specification uses S{artifact.snapshot_id}. "
+            "Generate a new specification before relying on it.",
+            title="Specification is based on an older score",
+            icon=":material/warning:",
         )
     with st.container(horizontal=True):
-        st.metric("Evidence-backed choices", artifact.evidence_backed_count, border=True)
-        st.metric("Assumptions to validate", artifact.assumption_count, border=True)
-        st.metric("Evidence warnings", artifact.warning_count, border=True)
-        st.metric("Source snapshot", f"S{artifact.snapshot_id}", border=True)
+        st.metric("Evidence-backed choices", artifact.evidence_backed_count, border=True, icon=":material/fact_check:")
+        st.metric("Assumptions to validate", artifact.assumption_count, border=True, icon=":material/help:")
+        st.metric("Evidence warnings", artifact.warning_count, border=True, icon=":material/warning:")
+        st.metric("Source snapshot", f"S{artifact.snapshot_id}", border=True, icon=":material/history:")
 
     with st.container(horizontal=True):
         st.download_button(
@@ -73,7 +82,10 @@ def render_book_specification_view(niche_id: int) -> None:
     with st.container(border=True):
         st.markdown(artifact.markdown)
 
-    with st.expander(f"Specification history · {len(history)} drafts"):
+    with st.expander(
+        f"Specification history · {len(history)} drafts",
+        icon=":material/history:",
+    ):
         frame = pd.DataFrame([{
             "Concept": f"C{concept.id}",
             "Created": concept.created_at,

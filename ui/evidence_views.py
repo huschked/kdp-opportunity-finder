@@ -7,15 +7,21 @@ from db.database import session_scope
 from db.repositories import EvidenceRepository
 from services.evidence_service import merge_pain_points, rename_pain_point
 from ui.errors import render_operation_error
+from ui.layout import render_empty_state
 
 
 def render_pain_points(niche_id: int) -> None:
     with session_scope() as session:
         rows = EvidenceRepository(session).pain_point_summaries(niche_id)
-    st.subheader("Solvable reader pain points")
+    st.subheader("Solvable reader pain points", icon=":material/problem:")
     st.caption("Shipping, seller, and buyer-mismatch complaints are excluded from opportunity totals.")
     if not rows:
-        st.info("No solvable pain points yet. Run review analysis from Research.")
+        render_empty_state(
+            title="No solvable reader pain points yet",
+            body="Logistics, seller, and buyer-mismatch complaints remain traceable but are excluded from opportunity totals.",
+            next_step="Import source reviews and run Analyze reviews from Research.",
+            icon="problem",
+        )
         return
     st.dataframe(
         pd.DataFrame([{
@@ -24,13 +30,19 @@ def render_pain_points(niche_id: int) -> None:
         } for row in rows]),
         hide_index=True,
         column_config={
+            "Pain point": st.column_config.TextColumn(pinned=True),
             "Severity": st.column_config.NumberColumn(format="%.1f"),
             "Solvability": st.column_config.NumberColumn(format="%.1f"),
             "Confidence": st.column_config.NumberColumn(format="percent"),
         },
     )
     by_id = {row["id"]: row for row in rows}
-    selected_id = st.selectbox("Inspect pain point", list(by_id), format_func=lambda value: by_id[value]["name"])
+    selected_id = st.selectbox(
+        "Inspect pain point",
+        list(by_id),
+        format_func=lambda value: by_id[value]["name"],
+        key=f"pain_point_{niche_id}",
+    )
     selected = by_id[selected_id]
     with st.container(border=True):
         st.write(f"**{selected['name']}**")
@@ -38,9 +50,14 @@ def render_pain_points(niche_id: int) -> None:
         st.caption(f"Suggested book response: {selected['solution'] or 'Not supplied'}")
     with session_scope() as session:
         evidence = EvidenceRepository(session).pain_point_evidence(selected_id)
-    st.dataframe(pd.DataFrame(evidence), hide_index=True, column_config={"review": st.column_config.TextColumn(width="large")})
+    st.dataframe(
+        pd.DataFrame(evidence),
+        hide_index=True,
+        key=f"pain_evidence_{selected_id}",
+        column_config={"review": st.column_config.TextColumn(width="large")},
+    )
 
-    with st.expander("Correct this grouping"):
+    with st.expander("Correct this grouping", icon=":material/edit:"):
         with st.form("rename_pain_point"):
             new_name = st.text_input("Canonical name", value=selected["name"])
             if st.form_submit_button("Rename"):
@@ -82,9 +99,14 @@ def render_pain_points(niche_id: int) -> None:
 def render_praise(niche_id: int) -> None:
     with session_scope() as session:
         rows = EvidenceRepository(session).praise_summaries(niche_id)
-    st.subheader("Praised features and value signals")
+    st.subheader("Praised features and value signals", icon=":material/thumb_up:")
     if not rows:
-        st.info("No praised features yet. Run review analysis from Research.")
+        render_empty_state(
+            title="No praised features yet",
+            body="Praised features appear only when stored source reviews support them.",
+            next_step="Import source reviews and run Analyze reviews from Research.",
+            icon="thumb_up",
+        )
         return
     st.dataframe(
         pd.DataFrame([{
@@ -92,26 +114,48 @@ def render_praise(niche_id: int) -> None:
             "Strength": row["strength"], "Confidence": row["confidence"],
         } for row in rows]),
         hide_index=True,
-        column_config={"Strength": st.column_config.NumberColumn(format="%.1f"), "Confidence": st.column_config.NumberColumn(format="percent")},
+        column_config={
+            "Praised feature": st.column_config.TextColumn(pinned=True),
+            "Strength": st.column_config.NumberColumn(format="%.1f"),
+            "Confidence": st.column_config.NumberColumn(format="percent"),
+        },
     )
     by_id = {row["id"]: row for row in rows}
-    selected_id = st.selectbox("Inspect praised feature", list(by_id), format_func=lambda value: by_id[value]["name"])
-    st.write(by_id[selected_id]["description"] or "No description")
+    selected_id = st.selectbox(
+        "Inspect praised feature",
+        list(by_id),
+        format_func=lambda value: by_id[value]["name"],
+        key=f"praise_feature_{niche_id}",
+    )
+    with st.container(border=True):
+        st.write(f"**{by_id[selected_id]['name']}**")
+        st.write(by_id[selected_id]["description"] or "No description supplied.")
     with session_scope() as session:
         evidence = EvidenceRepository(session).praise_evidence(selected_id)
-    st.dataframe(pd.DataFrame(evidence), hide_index=True, column_config={"review": st.column_config.TextColumn(width="large")})
+    st.dataframe(
+        pd.DataFrame(evidence),
+        hide_index=True,
+        key=f"praise_evidence_{selected_id}",
+        column_config={"review": st.column_config.TextColumn(width="large")},
+    )
 
 
 def render_analysis_history(niche_id: int) -> None:
-    st.subheader("Analysis history")
+    st.subheader("Analysis history", icon=":material/history:")
     with session_scope() as session:
         rows = EvidenceRepository(session).analysis_runs(niche_id)
     if not rows:
-        st.info("No analysis runs yet.")
+        render_empty_state(
+            title="No analysis runs yet",
+            body="Completed and failed runs appear here with provider, model, timing, token, and cost metadata.",
+            next_step="Open Research and run Analyze reviews for this niche.",
+            icon="history",
+        )
         return
     st.dataframe(
         pd.DataFrame(rows),
         hide_index=True,
+        key=f"analysis_history_{niche_id}",
         column_config={
             "Started": st.column_config.DatetimeColumn(format="MMM DD, YYYY, h:mm a"),
             "Estimated cost": st.column_config.NumberColumn(format="dollar"),

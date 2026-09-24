@@ -67,6 +67,10 @@ def test_app_dashboard_and_sample_load(isolated_streamlit_database) -> None:
 
     app.selectbox(key="research_task").set_value("Analyze reviews").run()
     assert not app.exception
+    assert not app.radio
+    assert any(
+        control.label == "Analysis provider" for control in app.segmented_control
+    )
 
     app.switch_page("app_pages/niche_detail.py").run()
     assert not app.exception
@@ -151,3 +155,24 @@ def test_app_dashboard_and_sample_load(isolated_streamlit_database) -> None:
     assert app.selectbox(key="export_reviews_niche")
     assert len(app.dataframe[0].value) == 60
     assert len(app.download_button) == 2
+
+
+def test_empty_states_are_actionable(isolated_streamlit_database) -> None:
+    app = AppTest.from_file(ROOT / "app.py", default_timeout=10).run()
+
+    for page_path in (
+        "app_pages/dashboard.py",
+        "app_pages/research.py",
+        "app_pages/niche_detail.py",
+        "app_pages/report.py",
+        "app_pages/concept.py",
+        "app_pages/compare.py",
+        "app_pages/pipeline.py",
+        "app_pages/exports.py",
+    ):
+        app.switch_page(page_path).run()
+        assert not app.exception
+        assert app.info
+        assert any(
+            caption.value.startswith("Next step:") for caption in app.caption
+        )

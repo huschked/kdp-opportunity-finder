@@ -10,6 +10,7 @@ from db.database import session_scope
 from db.repositories import BookRepository, NicheRepository, ReviewRepository
 from ui.evidence_views import render_analysis_history, render_pain_points, render_praise
 from ui.decision_views import render_decision
+from ui.layout import render_empty_state
 from ui.report_views import render_opportunity_report
 
 
@@ -19,20 +20,31 @@ with session_scope() as session:
     niches = NicheRepository(session).list_all()
 
 if not niches:
-    st.info("Create a niche before opening its detail view.")
+    render_empty_state(
+        title="No niche to inspect",
+        body="Niche detail brings competitor observations, source reviews, analysis, and decisions together.",
+        next_step="Open Research and create the first niche hypothesis.",
+        icon="menu_book",
+    )
     st.stop()
 
 niches_by_id = {niche.id: niche for niche in niches}
-niche_id = st.selectbox(
-    "Niche",
-    list(niches_by_id),
-    format_func=lambda value: niches_by_id[value].name,
-    key="detail_niche",
-    bind="query-params",
-)
-view = st.selectbox(
-    "View", ("Decision", "Opportunity report", "Competitors", "Reviews", "Pain points", "Praise", "Analysis history"), index=0, key="detail_view"
-)
+selector_columns = st.columns(2)
+with selector_columns[0]:
+    niche_id = st.selectbox(
+        "Niche",
+        list(niches_by_id),
+        format_func=lambda value: niches_by_id[value].name,
+        key="detail_niche",
+        bind="query-params",
+    )
+with selector_columns[1]:
+    view = st.selectbox(
+        "Evidence view",
+        ("Decision", "Opportunity report", "Competitors", "Reviews", "Pain points", "Praise", "Analysis history"),
+        index=0,
+        key="detail_view",
+    )
 
 if view == "Decision":
     render_decision(niche_id)
@@ -41,16 +53,49 @@ elif view == "Opportunity report":
 elif view == "Competitors":
     with session_scope() as session:
         competitor_rows = BookRepository(session).rows_by_niche(niche_id)
-    st.subheader("Competitor evidence")
+    st.subheader("Competitor evidence", icon=":material/library_books:")
+    if not competitor_rows:
+        render_empty_state(
+            title="No competitor books yet",
+            body="Market summaries require stored competitor observations; missing values are never estimated.",
+            next_step="Open Research, choose Add or edit book, and record the first observed competitor.",
+            icon="library_add",
+        )
+        st.stop()
     summary = summarize_competitors(competitor_rows)
-    metrics = st.columns(3)
-    metrics[0].metric("Books", summary["book_count"])
-    metrics[1].metric("Median price", f"${summary['median_price']:.2f}" if summary["median_price"] is not None else "Missing")
-    metrics[2].metric("Median rating", f"{summary['median_rating']:.2f}" if summary["median_rating"] is not None else "Missing")
-    metrics = st.columns(3)
-    metrics[0].metric("Median reviews", f"{summary['median_review_count']:,.0f}" if summary["median_review_count"] is not None else "Missing")
-    metrics[1].metric("Median pages", f"{summary['median_page_count']:,.0f}" if summary["median_page_count"] is not None else "Missing")
-    metrics[2].metric("Top-three share", f"{summary['top_three_review_share']:.1f}%" if summary["top_three_review_share"] is not None else "Missing")
+    with st.container(horizontal=True):
+        st.metric("Books", summary["book_count"], border=True, icon=":material/library_books:")
+        st.metric(
+            "Median price",
+            f"${summary['median_price']:.2f}" if summary["median_price"] is not None else "Missing",
+            border=True,
+            icon=":material/payments:",
+        )
+        st.metric(
+            "Median rating",
+            f"{summary['median_rating']:.2f}" if summary["median_rating"] is not None else "Missing",
+            border=True,
+            icon=":material/star:",
+        )
+        st.metric(
+            "Median reviews",
+            f"{summary['median_review_count']:,.0f}" if summary["median_review_count"] is not None else "Missing",
+            border=True,
+            icon=":material/reviews:",
+        )
+        st.metric(
+            "Median pages",
+            f"{summary['median_page_count']:,.0f}" if summary["median_page_count"] is not None else "Missing",
+            border=True,
+            icon=":material/article:",
+        )
+        st.metric(
+            "Top-three review share",
+            f"{summary['top_three_review_share']:.1f}%" if summary["top_three_review_share"] is not None else "Missing",
+            border=True,
+            icon=":material/pie_chart:",
+            help="Share of observed competitor review counts held by the three most-reviewed books.",
+        )
 
     search = st.text_input("Search title or author", key="competitor_search", placeholder="Filter competitors")
     formats = sorted({row["format"] for row in competitor_rows if row["format"]})
@@ -101,12 +146,25 @@ elif view == "Competitors":
             st.subheader("Where competitor attention is concentrated")
             st.bar_chart(pd.DataFrame(chart_rows), x="Title", y="Reviews", horizontal=True)
     else:
-        st.info("No competitors match the current filters.")
+        render_empty_state(
+            title="No competitors match these filters",
+            body="The stored competitor evidence is still available; the current search or format filter hides it.",
+            next_step="Clear the search text or selected formats.",
+            icon="filter_alt_off",
+        )
 elif view == "Reviews":
-    st.subheader("Review evidence")
+    st.subheader("Review evidence", icon=":material/reviews:")
     with session_scope() as session:
         books = BookRepository(session).list_by_niche(niche_id)
         filter_options = ReviewRepository(session).analysis_filter_options(niche_id)
+    if not books:
+        render_empty_state(
+            title="No books available for review evidence",
+            body="Reviews must link to one stored competitor by its source identifier.",
+            next_step="Add a competitor book in Research before importing reviews.",
+            icon="library_add",
+        )
+        st.stop()
     book_options = {book.id: book.title for book in books}
     pain_options = {item.id: item.canonical_name for item in filter_options["pain_points"]}
     with st.form("review_filters", border=False):
@@ -140,9 +198,38 @@ elif view == "Reviews":
             topic=topic,
             pain_point_id=pain_point_id,
         )
-    st.metric("Matching reviews", len(rows))
+    st.metric(
+        "Matching reviews",
+        len(rows),
+        border=True,
+        icon=":material/filter_list:",
+        help="Exact number of stored reviews matching the submitted filters.",
+    )
     if not rows:
-        st.info("No reviews match the current filters.")
+        filters_active = bool(
+            query.strip()
+            or book_id is not None
+            or ratings
+            or sentiments
+            or topic is not None
+            or pain_point_id is not None
+            or date_from
+            or date_to
+        )
+        render_empty_state(
+            title="No reviews match these filters" if filters_active else "No review evidence yet",
+            body=(
+                "Stored reviews remain unchanged; the submitted filters returned no matches."
+                if filters_active
+                else "This niche has competitor books but no imported source reviews."
+            ),
+            next_step=(
+                "Clear one or more filters and apply them again."
+                if filters_active
+                else "Open Research and import reviews using a matching book identifier."
+            ),
+            icon="filter_alt_off" if filters_active else "reviews",
+        )
         st.stop()
 
     frame = pd.DataFrame([

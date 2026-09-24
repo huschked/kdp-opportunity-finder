@@ -10,6 +10,7 @@ from db.database import session_scope
 from db.repositories import ScoreRepository
 from services.scoring_service import apply_human_score_override, calculate_niche_score
 from ui.errors import render_operation_error
+from ui.layout import render_empty_state
 
 
 COMPONENT_LABELS = {
@@ -23,7 +24,7 @@ COMPONENT_LABELS = {
 
 
 def render_decision(niche_id: int) -> None:
-    st.subheader("Decision score")
+    st.subheader("Decision score", icon=":material/query_stats:")
     st.caption("Calculate from the evidence currently stored for this niche. Missing facts reduce confidence and remain visible.")
 
     if st.button("Calculate a new snapshot", type="primary", icon=":material/calculate:", key=f"score_{niche_id}"):
@@ -50,7 +51,12 @@ def render_decision(niche_id: int) -> None:
         history = repository.history_for_niche(niche_id)
 
     if latest is None:
-        st.info("No score exists yet. Calculate the first evidence-backed snapshot.")
+        render_empty_state(
+            title="No decision snapshot yet",
+            body="A decision score uses only the evidence currently stored for this niche; missing observations remain visible.",
+            next_step="Select Calculate a new snapshot above.",
+            icon="query_stats",
+        )
         return
 
     explanation = latest.explanation_json or {}
@@ -58,22 +64,46 @@ def render_decision(niche_id: int) -> None:
     effective_score = latest.human_overall_score if latest.human_overall_score is not None else latest.automated_overall_score
     effective_recommendation = recommendation_label(effective_score, latest.confidence_score)
     with st.container(horizontal=True):
-        st.metric("Decision score", f"{effective_score:.1f}", border=True)
-        st.metric("Automated score", f"{latest.automated_overall_score:.1f}", border=True)
-        st.metric("Confidence", f"{latest.confidence_score:.1f}", border=True)
-        st.metric("UDI", f"{latest.unmet_demand_index or 0:.1f}", border=True)
+        st.metric("Decision score", f"{effective_score:.1f}", border=True, icon=":material/leaderboard:")
+        st.metric("Automated score", f"{latest.automated_overall_score:.1f}", border=True, icon=":material/calculate:")
+        st.metric(
+            "Confidence",
+            f"{latest.confidence_score:.1f}",
+            border=True,
+            icon=":material/fact_check:",
+            help="Evidence coverage and quality. Confidence gates recommendation language but does not increase the score.",
+        )
+        st.metric(
+            "Unmet demand index",
+            f"{latest.unmet_demand_index or 0:.1f}",
+            border=True,
+            icon=":material/track_changes:",
+            help="Demand, customer gap, solvability, and competitive accessibility combined multiplicatively.",
+        )
 
     if effective_recommendation == "Needs more data":
-        st.warning(f"Recommendation: **{effective_recommendation}**. Opportunity language is gated until evidence confidence improves.")
+        st.warning(
+            "Opportunity language is gated until evidence confidence improves.",
+            title=f"Recommendation: {effective_recommendation}",
+            icon=":material/warning:",
+        )
     else:
-        st.success(f"Recommendation: **{effective_recommendation}**")
+        st.success(
+            "Review the supporting observations and warnings before making a publishing decision.",
+            title=f"Recommendation: {effective_recommendation}",
+            icon=":material/check_circle:",
+        )
     if latest.human_overall_score is not None:
         st.caption(f"Automated recommendation: {automated_recommendation}. The displayed decision score includes a separately recorded human override.")
 
     confidence = explanation.get("confidence", {})
     warnings = confidence.get("warnings", [])
     if warnings:
-        st.warning("Evidence warnings:\n\n" + "\n".join(f"- {warning}" for warning in warnings))
+        st.warning(
+            "\n".join(f"- {warning}" for warning in warnings),
+            title="Evidence warnings",
+            icon=":material/warning:",
+        )
 
     component_payload = explanation.get("components", {})
     rows = []
@@ -98,10 +128,13 @@ def render_decision(niche_id: int) -> None:
         },
     )
 
-    st.subheader("Why the scores look this way")
+    st.subheader("Why the scores look this way", icon=":material/manage_search:")
     for key, label in COMPONENT_LABELS.items():
         payload = component_payload.get(key, {})
-        with st.expander(f"{label} · {float(payload.get('score', 0)):.1f}"):
+        with st.expander(
+            f"{label} · {float(payload.get('score', 0)):.1f}",
+            icon=":material/analytics:",
+        ):
             st.write(payload.get("explanation", "No explanation was stored for this legacy snapshot."))
             if payload.get("calculation"):
                 st.caption(payload["calculation"])
@@ -114,10 +147,14 @@ def render_decision(niche_id: int) -> None:
             if payload.get("inputs"):
                 st.json(payload["inputs"], expanded=False)
             if payload.get("missing"):
-                st.info("Missing observations: " + ", ".join(payload["missing"]))
+                st.info(
+                    ", ".join(payload["missing"]),
+                    title="Missing observations",
+                    icon=":material/help:",
+                )
 
     udi = explanation.get("udi", {})
-    with st.expander("UDI factor explanation"):
+    with st.expander("Unmet demand index factors", icon=":material/track_changes:"):
         st.write(udi.get("explanation", "No UDI explanation was stored for this legacy snapshot."))
         if udi.get("factors"):
             st.table(pd.DataFrame([
@@ -125,7 +162,7 @@ def render_decision(niche_id: int) -> None:
                 for factor, value in udi["factors"].items()
             ]), border="horizontal")
 
-    st.subheader("Human decision adjustment")
+    st.subheader("Human decision adjustment", icon=":material/edit_note:")
     st.caption("An adjustment creates a new snapshot. It does not alter the automated components or confidence score.")
     with st.form(f"human_override_{niche_id}"):
         human_score = st.number_input(
@@ -159,7 +196,10 @@ def render_decision(niche_id: int) -> None:
             st.success("The human adjustment was recorded without changing the automated score.")
             st.rerun()
 
-    with st.expander(f"Score history · {len(history)} snapshots"):
+    with st.expander(
+        f"Score history · {len(history)} snapshots",
+        icon=":material/history:",
+    ):
         history_rows = [{
             "Calculated": item.calculated_at,
             "Version": item.scoring_version,

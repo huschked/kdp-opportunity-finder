@@ -13,7 +13,7 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
 | Phase 5 — Outputs and workflow | Done | Reports, specifications, comparison, pipeline, and traceable exports |
-| Phase 6 — Hardening | In progress | Test matrix, guarded migrations, operational errors, and performance complete; accessibility and visual cleanup are next |
+| Phase 6 — Hardening | In progress | Test matrix, guarded migrations, operational errors, performance, and UI hardening complete; final documentation is next |
 
 ## In progress
 
@@ -21,12 +21,12 @@ No active card.
 
 ## Ready
 
-### P6-UI-01 — Accessibility, responsive layout, empty states, and visual cleanup
+### P6-DOCS-01 — Final README, import references, limitations, and roadmap
 
 - **Priority:** P1
-- **Deliverable:** Complete a focused UI quality pass without obscuring evidence, uncertainty, or human-control boundaries.
-- **Dependencies:** `P6-PERF-01`.
-- **Verification:** AppTest coverage, desktop/mobile review, full regression suite, and running-app smoke test.
+- **Deliverable:** Bring the README and supporting references in line with the completed V1 workflows, setup requirements, known limitations, and post-V1 roadmap.
+- **Dependencies:** `P6-UI-01`.
+- **Verification:** Documentation link/command review, clean-environment setup walkthrough, full regression suite, and running-app smoke test.
 
 ## Backlog
 
@@ -36,7 +36,7 @@ No remaining Phase 5 cards.
 
 ### Phase 6 — Hardening
 
-- `P6-DOCS-01` — Final README, import references, limitations, and roadmap.
+No remaining backlog cards; `P6-DOCS-01` is ready.
 
 ## Blocked
 
@@ -314,6 +314,20 @@ Use this section only when a card cannot progress without a user decision, missi
 - The disposable performance profile completed all representative workflows and recorded SQL counts, returned totals, and median local timings.
 - Streamlit AppTest passed the updated form interaction; Python compilation and repository whitespace validation passed.
 - A temporary Streamlit server returned HTTP 200 for health and root endpoints after the performance changes.
+
+### P6-UI-01 — Accessibility, responsive layout, empty states, and visual cleanup
+
+- Shared native Streamlit layout patterns give every primary no-data state a clear explanation and concrete next step without hiding uncertainty or inventing evidence.
+- Dashboard metrics, decision views, import previews, and detail summaries use responsive containers, concise help text, explicit icons, and readable metric names while retaining separate scores, confidence, warnings, provenance, and manual workflow status.
+- Top-level pages and evidence panels use consistent headings, bordered groups, sentence-case labels, stable widget keys, and explicit status text instead of relying on color alone.
+- The review-analysis provider choice now uses a responsive segmented control; no custom CSS, unsafe HTML, or fixed-width desktop-only layout was introduced.
+
+### P6-UI-VERIFY-01 — UI-hardening verification
+
+- Eighty-seven tests pass, including actionable empty states across all primary pages, empty and seeded navigation, provider-control behavior, and every existing business-logic guardrail.
+- Python compilation and repository whitespace validation pass, and the deprecated-layout scan finds no dividers, horizontal radios, `use_container_width`, unsafe HTML, or raw `st.html` use in the app UI.
+- Rendered browser review at 1440×900 and 390×844 confirms the dashboard and dense decision detail remain readable with no document-level horizontal overflow.
+- A temporary Streamlit server returned HTTP 200 for health and root endpoints; browser diagnostics reported no application errors, only non-blocking Vega scale warnings from Streamlit's chart renderer.
 
 ## Scope guardrails
 

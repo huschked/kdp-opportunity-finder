@@ -6,6 +6,7 @@ import streamlit as st
 
 from db.database import session_scope
 from services.report_service import generate_opportunity_report
+from ui.layout import render_empty_state
 
 
 def render_opportunity_report(niche_id: int, *, show_heading: bool = True) -> None:
@@ -16,11 +17,20 @@ def render_opportunity_report(niche_id: int, *, show_heading: bool = True) -> No
         with session_scope() as session:
             report = generate_opportunity_report(session, niche_id=niche_id)
     except ValueError as exc:
-        st.info(str(exc))
+        render_empty_state(
+            title="No report available yet",
+            body=str(exc),
+            next_step="Open Niche detail, select Decision, and calculate a current score snapshot.",
+            icon="description",
+        )
         return
 
     if report.warnings:
-        st.warning(f"This report contains {len(report.warnings)} evidence warning(s). Review them before using its recommendation.")
+        st.warning(
+            f"This report contains {len(report.warnings)} evidence warning(s). Review them before using its recommendation.",
+            title="Evidence requires review",
+            icon=":material/warning:",
+        )
     with st.container(horizontal=True):
         st.download_button(
             "Download Markdown report",
