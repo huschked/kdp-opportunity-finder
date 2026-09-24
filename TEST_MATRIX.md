@@ -1,8 +1,8 @@
 # V1 Critical Business Logic Test Matrix
 
-Last updated: 2026-09-21
+Last updated: 2026-09-24
 
-This matrix maps the V1 business rules to automated regression evidence. It tracks requirements coverage, not line coverage. The suite remains intentionally local: external OpenAI requests, browser rendering details, concurrency, and large-volume performance are listed separately as residual risks.
+This matrix maps the V1 business rules to automated regression evidence. It tracks requirements coverage, not line coverage. The suite remains intentionally local; a disposable performance profile and representative desktop/mobile browser checks supplement the automated tests. External OpenAI requests, operating-system failures, concurrency, and unprofiled large-volume behavior remain residual risks.
 
 ## Protected invariants
 
@@ -29,7 +29,9 @@ This matrix maps the V1 business rules to automated regression evidence. It trac
 | CSV/JSON exports | Decision, book, and review datasets serialize with stable provenance IDs | Latest-snapshot policy, filtering, nested evidence, CSV blanks, and JSON nulls are covered | Unsupported datasets, missing required scope, and unknown niches are rejected | `tests/test_export_service.py` |
 | Database migrations | Fresh databases upgrade to Alembic head; matching populated databases retain their records when adopted | Version state, exact metadata agreement, and idempotent startup are covered | Partial or unexpected unversioned schemas are refused without adding the version table or changing stored rows | `tests/test_migrations.py` |
 | Operational failures | Expected and unexpected operations produce structured diagnostics plus a short UI reference | Only allow-listed identifiers enter log context; secrets and review/body fields are redacted | Raw exception text is withheld from the UI and structured failure record; failed transactions and incompatible schemas retain prior data | `tests/test_error_handling.py`, `tests/test_analysis_service.py` |
-| Streamlit application | Seeded workflows execute across every top-level page through the real entry point | Data-dependent pages render safe empty states before sample data exists | Every interaction rerun is checked for uncaught exceptions | `tests/test_streamlit_app.py` |
+| Performance boundaries | Representative reads, imports, scoring, exports, and analysis complete on a disposable synthetic corpus | Latest-row queries remain bounded by parent count; import lookups and provider batches have explicit caps; cached reviews make zero provider calls | New review content invalidates only its extraction cache, and database results are not cached across mutations | `tests/test_performance.py`, `scripts/profile_performance.py` |
+| Streamlit application | Seeded workflows execute across every top-level page through the real entry point | Data-dependent pages render actionable empty states; provider selection and responsive native controls retain explicit labels | Every interaction rerun is checked for uncaught exceptions; rendered desktop/mobile checks found no page-level horizontal overflow | `tests/test_streamlit_app.py`, manual browser verification |
+| Documentation contract | Root documentation links resolve and shipped CSV/JSON templates validate against the current schemas | Every current book/review import field and accepted alias is present in the import reference | Missing linked files, undocumented schema fields, or invalid templates fail the suite | `tests/test_documentation.py` |
 
 ## Guardrail-to-test traceability
 
@@ -45,7 +47,7 @@ This matrix maps the V1 business rules to automated regression evidence. It trac
 
 ## Inventory
 
-The suite currently collects 81 cases:
+The suite currently collects 90 cases:
 
 | Test module | Cases |
 |---|---:|
@@ -55,6 +57,7 @@ The suite currently collects 81 cases:
 | `test_concept_service.py` | 6 |
 | `test_database.py` | 3 |
 | `test_decision_scoring.py` | 5 |
+| `test_documentation.py` | 3 |
 | `test_export_service.py` | 4 |
 | `test_error_handling.py` | 5 |
 | `test_import_service.py` | 6 |
@@ -62,22 +65,24 @@ The suite currently collects 81 cases:
 | `test_migrations.py` | 3 |
 | `test_niche_service.py` | 4 |
 | `test_openai_provider.py` | 2 |
+| `test_performance.py` | 5 |
 | `test_pipeline_service.py` | 7 |
 | `test_report_service.py` | 6 |
 | `test_review_cleaning.py` | 1 |
 | `test_sample_data.py` | 2 |
 | `test_scoring.py` | 5 |
 | `test_scoring_service.py` | 5 |
-| `test_streamlit_app.py` | 1 |
-| **Total** | **81** |
+| `test_streamlit_app.py` | 2 |
+| **Total** | **90** |
 
-## Residual risks and later Phase 6 work
+## Residual V1 risks and deliberate boundaries
 
 - **Live provider behavior:** the OpenAI adapter is contract-tested with a fake client, but no test spends API credits or depends on live network availability.
-- **Rendered-browser behavior:** `AppTest` verifies page execution and widget state; actual file-transfer behavior, responsive layout, keyboard navigation, and screen-reader output remain for `P6-UI-01`.
-- **Schema evolution:** `P6-MIGRATE-01` now covers fresh upgrades, populated current-schema adoption, exact schema comparison, version state, idempotent startup, and incompatible-schema refusal. Multi-process concurrent writes remain for `P6-PERF-01`.
-- **Scale:** correctness is covered on focused and synthetic corpora. Query counts, large imports, memory use, and rerun latency remain for `P6-PERF-01`.
+- **Rendered-browser behavior:** `AppTest` verifies page execution and widget state, and representative 1440×900 and 390×844 browser checks cover layout and page-level overflow. Keyboard-only flow, screen-reader output, file transfer in every browser, and formal accessibility certification remain manual.
+- **Schema and concurrency:** migrations cover fresh upgrades, populated current-schema adoption, exact schema comparison, version state, idempotent startup, and incompatible-schema refusal. Multi-process concurrent writes remain outside the single-user SQLite V1 model.
+- **Scale:** query counts and bounded batch behavior are covered on focused tests and a 3-niche/30-book/180-review profile. Much larger corpora, memory pressure, and long-running provider latency require separate capacity testing.
 - **Operational environment:** structured failure handling is covered locally. Filesystem exhaustion, OS-level permission changes after startup, and external log aggregation remain outside the local V1 scope.
+- **Input rights and representativeness:** the app preserves provenance but cannot establish whether user-supplied observations are licensed, current, complete, or representative of a marketplace.
 
 ## Verification commands
 

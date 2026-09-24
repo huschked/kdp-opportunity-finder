@@ -100,13 +100,13 @@ Each normalized factor is divided by 100 before multiplication and the result is
 
 1. **Dashboard** — corpus totals, stage distribution, ranked opportunities, recent analyses, and confidence warnings.
 2. **Research** — create/edit niche, add books, import books/reviews, and run analysis.
-3. **Niche Detail** — overview, competitors, reviews, pain points with evidence, praise, score explanations, reports, concepts, raw data, and history.
+3. **Niche Detail** — decision evidence, report preview, competitors, source reviews, pain points with evidence, praise, and analysis history.
 4. **Opportunity report** — deterministic evidence-linked decision report and Markdown download.
 5. **Book specification** — evidence-grounded product brief with assumption and risk labeling.
 6. **Compare** — side-by-side scores, confidence, UDI, and only decision-useful charts.
 7. **Pipeline** — status controls for discovered through published, plus rejected/archived.
 8. **Exports** — explicitly scoped CSV and JSON downloads for decisions, books, and review evidence.
-9. **Settings** — scoring configuration, LLM provider/model, cost assumptions, and local data status.
+9. **Settings** — configured database, LLM provider/model, scoring-policy location, and active score weights.
 
 ## Design issues resolved
 
@@ -121,6 +121,8 @@ Each normalized factor is divided by 100 before multiplication and the result is
 9. **Portable evidence without lost provenance:** exports include stable database/source/snapshot identifiers, keep automated scores, human adjustments, confidence, warnings, and missing observations separate, and preserve missing values as CSV blanks or JSON nulls.
 
 ## Implementation phases
+
+All six planned V1 phases are complete. [KANBAN.md](KANBAN.md) retains the execution history, while [ROADMAP.md](ROADMAP.md) separates deliberate V1 boundaries from candidate future work.
 
 ### Phase 1 — foundation
 
@@ -144,7 +146,7 @@ Opportunity report, evidence-grounded book specification, comparison, pipeline c
 
 ### Phase 6 — hardening
 
-Broader tests, malformed-input UX, migration support, structured logging, performance checks, README completion, and UI polish.
+Critical-business-rule tests, malformed-input UX, guarded migrations, structured logging, bounded performance, responsive UI and empty states, final setup/import references, limitations, and roadmap.
 
 ## Deliberately not automated in V1
 

@@ -1,6 +1,6 @@
 # KDP Opportunity Finder — Kanban
 
-Last updated: 2026-09-23
+Last updated: 2026-09-24
 
 This board tracks execution. `ARCHITECTURE.md` remains the authority for system design, data relationships, and scope decisions.
 
@@ -13,7 +13,7 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
 | Phase 5 — Outputs and workflow | Done | Reports, specifications, comparison, pipeline, and traceable exports |
-| Phase 6 — Hardening | In progress | Test matrix, guarded migrations, operational errors, performance, and UI hardening complete; final documentation is next |
+| Phase 6 — Hardening | Done | Tests, guarded migrations, operational errors, bounded performance, UI hardening, and final V1 documentation |
 
 ## In progress
 
@@ -21,12 +21,7 @@ No active card.
 
 ## Ready
 
-### P6-DOCS-01 — Final README, import references, limitations, and roadmap
-
-- **Priority:** P1
-- **Deliverable:** Bring the README and supporting references in line with the completed V1 workflows, setup requirements, known limitations, and post-V1 roadmap.
-- **Dependencies:** `P6-UI-01`.
-- **Verification:** Documentation link/command review, clean-environment setup walkthrough, full regression suite, and running-app smoke test.
+No remaining planned V1 cards.
 
 ## Backlog
 
@@ -36,7 +31,7 @@ No remaining Phase 5 cards.
 
 ### Phase 6 — Hardening
 
-No remaining backlog cards; `P6-DOCS-01` is ready.
+No remaining planned V1 backlog cards.
 
 ## Blocked
 
@@ -328,6 +323,20 @@ Use this section only when a card cannot progress without a user decision, missi
 - Python compilation and repository whitespace validation pass, and the deprecated-layout scan finds no dividers, horizontal radios, `use_container_width`, unsafe HTML, or raw `st.html` use in the app UI.
 - Rendered browser review at 1440×900 and 390×844 confirms the dashboard and dense decision detail remain readable with no document-level horizontal overflow.
 - A temporary Streamlit server returned HTTP 200 for health and root endpoints; browser diagnostics reported no application errors, only non-blocking Vega scale warnings from Streamlit's chart renderer.
+
+### P6-DOCS-01 — Final README, import references, limitations, and roadmap
+
+- The README now presents the completed V1 boundary, verified Windows/Python setup, first-use path, every application page, provider and evidence boundaries, local data/configuration, operational guidance, verification commands, and documentation map.
+- `IMPORT_REFERENCE.md` documents every accepted book/review field and alias, CSV/JSON shapes, matching and duplicate rules, preview/persistence behavior, common rejection recovery, provenance, and the source-rights boundary.
+- `ROADMAP.md` separates deliberate V1 limitations from candidate research quality, longitudinal evidence, approved-source, evaluation, collaboration, and publishing-workflow directions; no candidate becomes scope until it receives a reviewed Kanban card.
+- The Streamlit dependency floor is aligned with the native controls used by the final UI, and architecture/test references now describe the completed V1 state.
+
+### P6-DOCS-VERIFY-01 — Final documentation verification
+
+- Ninety tests pass, including new checks that root documentation links resolve, all current import fields/aliases are documented, and all four downloadable import templates validate against the live schemas.
+- A disposable Python 3.12 environment installed `requirements.txt` from scratch, loaded Streamlit 1.64.0, passed `pip check`, compiled the project, and passed the full suite; the temporary environment was removed afterward.
+- The clean-environment Streamlit server returned HTTP 200 for both health and root endpoints.
+- Repository whitespace validation and a final documentation/status review passed before Phase 6 was marked Done.
 
 ## Scope guardrails
 
