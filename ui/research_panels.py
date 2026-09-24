@@ -15,6 +15,7 @@ from collectors.templates import (
     REVIEWS_CSV_TEMPLATE,
     REVIEWS_JSON_TEMPLATE,
 )
+from config.logging import log_event
 from db.database import session_scope
 from db.repositories import BookRepository, NicheRepository
 from models import Book, Niche
@@ -22,6 +23,7 @@ from models.schemas import BookInput
 from services.book_service import BookService
 from services.import_service import ImportPreview, ImportService
 from services.niche_service import NicheNameConflict, NicheService
+from ui.errors import render_operation_error
 
 
 def load_niches() -> list[Niche]:
@@ -63,7 +65,14 @@ def render_create_niche() -> None:
                 )
             st.success(f"Created {niche.name}. It is marked Discovered.")
         except (ValueError, NicheNameConflict) as exc:
-            st.error(str(exc))
+            render_operation_error(
+                exc,
+                operation="niche.create",
+                summary="The niche was not created.",
+                recovery="Use a non-empty, unique niche name and seed keyword, then try again.",
+                context={"entity": "niche", "action": "create"},
+                expected=True,
+            )
 
 
 def _number_default(value: int | float | None) -> int | float | None:
@@ -180,7 +189,18 @@ def render_manual_book(niches: list[Niche]) -> None:
                 )
             st.success(f"Saved {saved.title}.")
         except (ValidationError, ValueError) as exc:
-            st.error(str(exc))
+            render_operation_error(
+                exc,
+                operation="book.save",
+                summary="The competitor record was not saved.",
+                recovery="Review the required and numeric fields, then try again.",
+                context={
+                    "action": "update" if book else "create",
+                    "book_id": book.id if book else None,
+                    "niche_id": niche.id,
+                },
+                expected=True,
+            )
 
 
 def _template_buttons(entity: Literal["book", "review"]) -> None:
@@ -247,9 +267,10 @@ def render_import(niches: list[Niche], entity: Literal["book", "review"]) -> Non
             filename = f"pasted_{label}.csv"
 
     pending_key = f"pending_{entity}_import"
-    if st.button(
+    preview_requested = st.button(
         "Validate and preview", icon=":material/fact_check:", key=f"preview_{entity}", disabled=content is None
-    ) and content is not None:
+    )
+    if preview_requested and content is not None:
         st.session_state[pending_key] = {
             "niche_id": niche.id,
             "content": content,
@@ -260,12 +281,34 @@ def render_import(niches: list[Niche], entity: Literal["book", "review"]) -> Non
     pending = st.session_state.get(pending_key)
     if not pending or pending["niche_id"] != niche.id:
         return
-    with session_scope() as session:
-        service = ImportService(session)
-        preview = (
-            service.prepare_books(**pending)
-            if entity == "book"
-            else service.prepare_reviews(**pending)
+    try:
+        with session_scope() as session:
+            service = ImportService(session)
+            preview = (
+                service.prepare_books(**pending)
+                if entity == "book"
+                else service.prepare_reviews(**pending)
+            )
+    except Exception as exc:
+        render_operation_error(
+            exc,
+            operation="import.preview",
+            summary=f"The {label} file could not be validated.",
+            recovery="No records were imported. Check the file and database, then try again.",
+            context={"entity": entity, "niche_id": niche.id},
+        )
+        return
+    if preview_requested:
+        log_event(
+            "import_validation_completed",
+            operation="import.preview",
+            context={
+                "entity": entity,
+                "niche_id": niche.id,
+                "record_count": preview.valid_count,
+                "rejected_count": preview.rejected_count,
+                "status": "ready" if preview.valid_count else "rejected",
+            },
         )
     st.divider()
     _show_preview(preview)
@@ -273,18 +316,40 @@ def render_import(niches: list[Niche], entity: Literal["book", "review"]) -> Non
         f"Import {preview.valid_count} valid {label}", type="primary", icon=":material/upload:",
         key=f"commit_{entity}", disabled=not preview.valid_rows,
     ):
-        with session_scope() as session:
-            service = ImportService(session)
-            fresh_preview = (
-                service.prepare_books(**pending)
-                if entity == "book"
-                else service.prepare_reviews(**pending)
+        try:
+            with session_scope() as session:
+                service = ImportService(session)
+                fresh_preview = (
+                    service.prepare_books(**pending)
+                    if entity == "book"
+                    else service.prepare_reviews(**pending)
+                )
+                result = (
+                    service.import_books(niche_id=niche.id, preview=fresh_preview)
+                    if entity == "book"
+                    else service.import_reviews(preview=fresh_preview)
+                )
+        except Exception as exc:
+            render_operation_error(
+                exc,
+                operation="import.commit",
+                summary=f"The {label} import was not saved.",
+                recovery="The transaction was rolled back. Revalidate the file and try again.",
+                context={"entity": entity, "niche_id": niche.id},
             )
-            result = (
-                service.import_books(niche_id=niche.id, preview=fresh_preview)
-                if entity == "book"
-                else service.import_reviews(preview=fresh_preview)
+        else:
+            log_event(
+                "import_completed",
+                operation="import.commit",
+                context={
+                    "batch_id": result.batch_id,
+                    "entity": entity,
+                    "niche_id": niche.id,
+                    "record_count": result.imported_count,
+                    "rejected_count": result.rejected_count,
+                    "status": result.status,
+                },
             )
-        st.session_state["phase2_import_flash"] = result.model_dump(mode="json")
-        del st.session_state[pending_key]
-        st.rerun()
+            st.session_state["phase2_import_flash"] = result.model_dump(mode="json")
+            del st.session_state[pending_key]
+            st.rerun()

@@ -23,6 +23,13 @@ class Settings:
     openai_input_cost_per_million: float
     openai_output_cost_per_million: float
     scoring_config_path: Path
+    log_level: str
+    log_path: Path
+
+
+def _project_path(environment_name: str, default: Path) -> Path:
+    configured = Path(os.getenv(environment_name, str(default)))
+    return configured if configured.is_absolute() else PROJECT_ROOT / configured
 
 
 @lru_cache(maxsize=1)
@@ -38,4 +45,9 @@ def get_settings() -> Settings:
         openai_input_cost_per_million=float(os.getenv("OPENAI_INPUT_COST_PER_MILLION", "0")),
         openai_output_cost_per_million=float(os.getenv("OPENAI_OUTPUT_COST_PER_MILLION", "0")),
         scoring_config_path=PROJECT_ROOT / "config" / "scoring.yaml",
+        log_level=os.getenv("KDP_LOG_LEVEL", "INFO").upper(),
+        log_path=_project_path(
+            "KDP_LOG_PATH",
+            PROJECT_ROOT / "logs" / "kdp_opportunity_finder.jsonl",
+        ),
     )

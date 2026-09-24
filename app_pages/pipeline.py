@@ -14,6 +14,7 @@ from services.pipeline_service import (
     load_pipeline,
     status_history,
 )
+from ui.errors import render_operation_error
 
 
 def _pipeline_frame(rows: tuple[PipelineRow, ...]) -> pd.DataFrame:
@@ -175,7 +176,14 @@ if submitted:
                 rationale=rationale,
             )
     except ValueError as exc:
-        st.error(str(exc))
+        render_operation_error(
+            exc,
+            operation="pipeline.status_change",
+            summary="The pipeline status was not changed.",
+            recovery="Choose a different valid status and provide a rationale, then try again.",
+            context={"niche_id": selected_niche_id},
+            expected=True,
+        )
     else:
         st.session_state["pipeline_status_message"] = (
             f"Moved {selected_row.niche_name} from "

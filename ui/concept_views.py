@@ -8,6 +8,7 @@ import streamlit as st
 from db.database import session_scope
 from db.repositories import ConceptRepository, ScoreRepository
 from services.concept_service import generate_book_specification, render_book_specification
+from ui.errors import render_operation_error
 
 
 def render_book_specification_view(niche_id: int) -> None:
@@ -24,7 +25,14 @@ def render_book_specification_view(niche_id: int) -> None:
             with session_scope() as session:
                 generate_book_specification(session, niche_id=niche_id)
         except ValueError as exc:
-            st.error(str(exc))
+            render_operation_error(
+                exc,
+                operation="book_specification.generate",
+                summary="A new book specification was not created.",
+                recovery="Calculate a current decision score and review required evidence, then try again.",
+                context={"niche_id": niche_id},
+                expected=True,
+            )
         else:
             st.success("A new evidence-grounded specification snapshot was recorded.")
             st.rerun()

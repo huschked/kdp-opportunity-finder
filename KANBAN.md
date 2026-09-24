@@ -1,6 +1,6 @@
 # KDP Opportunity Finder — Kanban
 
-Last updated: 2026-09-21
+Last updated: 2026-09-23
 
 This board tracks execution. `ARCHITECTURE.md` remains the authority for system design, data relationships, and scope decisions.
 
@@ -13,7 +13,7 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
 | Phase 5 — Outputs and workflow | Done | Reports, specifications, comparison, pipeline, and traceable exports |
-| Phase 6 — Hardening | In progress | Critical test matrix and guarded Alembic migrations complete; error handling is next |
+| Phase 6 — Hardening | In progress | Test matrix, guarded migrations, and operational error handling complete; performance is next |
 
 ## In progress
 
@@ -21,17 +21,17 @@ No active card.
 
 ## Ready
 
-### P6-ERROR-01 — Structured logging and user-facing error handling
+### P6-PERF-01 — Query, batch, and rerun performance review
 
 - **Priority:** P1
-- **Deliverable:** Make operational failures diagnosable without exposing secrets or replacing evidence, and give users a clear recovery action in the UI.
+- **Deliverable:** Measure and improve the slowest local workflows without weakening evidence traceability or hiding data through silent limits.
 - **Acceptance criteria:**
-  - Application logging has a consistent local format and useful operation context without API keys or full review text.
-  - Expected import, provider, scoring, export, and schema failures produce concise user-facing guidance while retaining diagnostic detail in logs.
-  - Unexpected page failures are contained where recovery is possible and do not turn partial work into a successful result.
-  - Tests verify log context, redaction, recovery messages, and unchanged data after representative failures.
-- **Dependencies:** `P6-MIGRATE-01`.
-- **Verification:** Targeted failure-path tests, full regression suite, log inspection, and running-app recovery smoke test.
+  - Dashboard, niche detail, comparison, pipeline, export, import, scoring, and analysis flows are measured with representative local data.
+  - Avoidable repeated queries, unbounded materialization, and unnecessary Streamlit rerun work are removed where evidence shows a meaningful cost.
+  - Any batching, caching, pagination, or display limit is explicit, deterministic, and cannot silently change evidence totals or decision outputs.
+  - Regression tests cover query/batch boundaries and cache invalidation where optimization could otherwise create stale or incomplete results.
+- **Dependencies:** `P6-ERROR-01`.
+- **Verification:** Before/after measurements, targeted performance safeguards, full regression suite, and running-app smoke test.
 
 ## Backlog
 
@@ -41,7 +41,6 @@ No remaining Phase 5 cards.
 
 ### Phase 6 — Hardening
 
-- `P6-PERF-01` — Query, batch, and rerun performance review.
 - `P6-UI-01` — Accessibility, responsive layout, empty states, and visual cleanup.
 - `P6-DOCS-01` — Final README, import references, limitations, and roadmap.
 
@@ -289,6 +288,21 @@ Use this section only when a card cannot progress without a user decision, missi
 - Python compilation and repository whitespace validation pass.
 - Alembic reports revision `20260921_0001 (head)`, and the direct bootstrap reports the database is current.
 - A temporary Streamlit server returned HTTP 200 for health and root endpoints after the migration startup change.
+
+### P6-ERROR-01 — Structured logging and user-facing error handling
+
+- Rotating JSON-lines logs retain operation names, short reference IDs, allow-listed entity context, exception classes, and traceback frame locations.
+- Structured failure records omit exception messages and redact credentials, authorization values, review text, body content, and any context field outside the safe allow-list.
+- Startup/schema, page rendering, sample loading, imports, provider analysis, scoring, exports, pipeline changes, specification generation, and evidence corrections now present concise recovery guidance instead of raw exception text.
+- Import validation and committed batches record counts and stable IDs without logging uploaded contents or filenames.
+- The log path and level are configurable through `.env`, and local log files remain outside Git.
+
+### P6-ERROR-VERIFY-01 — Error-handling verification
+
+- Eighty-one tests pass, including JSON structure, safe context, secret/review redaction, durable warning references, UI recovery messaging, transaction rollback, provider failure atomicity, and real-entrypoint incompatible-schema recovery.
+- The incompatible-schema test preserves its existing database row and does not add an Alembic version marker.
+- Python compilation and repository whitespace validation pass.
+- A temporary Streamlit server returned HTTP 200 for health and root endpoints after the error-boundary changes.
 
 ## Scope guardrails
 

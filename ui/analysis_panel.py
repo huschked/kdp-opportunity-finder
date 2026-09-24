@@ -4,7 +4,36 @@ import streamlit as st
 
 from config.settings import get_settings
 from db.database import session_scope
+from llm.base import ProviderContractError
 from services.analysis_service import analyze_niche_reviews
+from ui.errors import render_operation_error
+
+
+def _analysis_error_message(error: BaseException) -> tuple[str, str, bool]:
+    message = str(error)
+    if isinstance(error, ValueError) and "OPENAI_API_KEY" in message:
+        return (
+            "OpenAI analysis is not configured.",
+            "Add OPENAI_API_KEY to .env or select the mock provider, then try again.",
+            True,
+        )
+    if isinstance(error, ValueError) and "no reviews" in message.lower():
+        return (
+            "This niche has no review evidence to analyze.",
+            "Import reviews for the niche, then start analysis again.",
+            True,
+        )
+    if isinstance(error, ProviderContractError):
+        return (
+            "The provider returned an analysis result the app could not validate.",
+            "Previous evidence was preserved. Try again or switch to the deterministic mock provider.",
+            True,
+        )
+    return (
+        "Review analysis could not be completed.",
+        "Previous evidence was preserved. Try again; use the error reference if the failure repeats.",
+        False,
+    )
 
 
 def render_analysis_panel(niches: list[object]) -> None:
@@ -49,5 +78,15 @@ def render_analysis_panel(niches: list[object]) -> None:
         st.rerun()
     except Exception as exc:
         status.update(label="Analysis failed; previous evidence was preserved", state="error", expanded=True)
-        status.error(str(exc))
-
+        summary, recovery, expected = _analysis_error_message(exc)
+        render_operation_error(
+            exc,
+            operation="review_analysis.run",
+            summary=summary,
+            recovery=recovery,
+            context={
+                "niche_id": niche_id,
+                "provider": provider_name,
+            },
+            expected=expected,
+        )

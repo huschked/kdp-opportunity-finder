@@ -35,6 +35,7 @@ Implemented:
 - traceable CSV and JSON exports for latest niche decisions, competitor books, and review evidence, with explicit scope, stable IDs, provenance, warnings, and missing values
 - a critical-business-rule test matrix covering uncertainty, rejected writes, immutable evidence history, failure atomicity, and cross-niche isolation
 - Alembic-managed schema startup with a reviewed baseline, safe adoption of matching local databases, and refusal of incompatible unversioned schemas
+- rotating JSON-lines operational logs with safe context, redaction, error reference IDs, and recovery-oriented Streamlit messages
 - database, scoring, import, cleaning, market-summary, analysis, export, and Streamlit tests
 
 Phase 5 is complete. Phase 6 hardening is underway. See [TEST_MATRIX.md](TEST_MATRIX.md) for guarded behavior, [MIGRATIONS.md](MIGRATIONS.md) for the safe database workflow, [ARCHITECTURE.md](ARCHITECTURE.md) for design, and [KANBAN.md](KANBAN.md) for live execution status.
@@ -58,6 +59,12 @@ streamlit run app.py
 ```
 
 Startup automatically upgrades an empty or versioned database to the current Alembic revision. A legacy database is stamped only after its schema matches the reviewed baseline; no application records are recreated. Back up local data before any schema work and follow [MIGRATIONS.md](MIGRATIONS.md).
+
+## Operational errors and logs
+
+When an operation fails, the app shows a concise recovery step and an error reference rather than raw exception text. Match that reference to the local JSON-lines log at `logs/kdp_opportunity_finder.jsonl`. Logs retain the operation name, safe record IDs, exception type, and traceback frame locations. Exception messages, API keys, authorization values, and review/body content are not written to the structured failure record.
+
+The log rotates at approximately 2 MB and retains three prior files. Change its location or verbosity with `KDP_LOG_PATH` and `KDP_LOG_LEVEL` in `.env`; relative log paths resolve from the project root. The `logs/` directory is ignored by Git.
 
 Use **Load synthetic sample** in the sidebar to create three deliberately different scenarios:
 
@@ -110,6 +117,7 @@ See [TEST_MATRIX.md](TEST_MATRIX.md) for the critical-business-rule coverage inv
 - Default database: `kdp_opportunity_finder.db` in the project root.
 - Override with `KDP_DATABASE_URL` in `.env`.
 - Schema revisions and backup/recovery workflow: [MIGRATIONS.md](MIGRATIONS.md).
+- Operational log: `logs/kdp_opportunity_finder.jsonl`; configure with `KDP_LOG_PATH` and `KDP_LOG_LEVEL`.
 - Scoring weights and targets: `config/scoring.yaml`; the six weights must total 1.0 and each snapshot stores the exact policy used.
 - LLM provider: `KDP_LLM_PROVIDER=mock` by default.
 

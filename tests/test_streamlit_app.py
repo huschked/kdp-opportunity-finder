@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from config.logging import reset_logging
 from config.settings import get_settings
 
 
@@ -14,7 +15,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def isolated_streamlit_database(monkeypatch, tmp_path):
     database_path = tmp_path / "streamlit_test.db"
     monkeypatch.setenv("KDP_DATABASE_URL", f"sqlite:///{database_path.as_posix()}")
+    monkeypatch.setenv(
+        "KDP_LOG_PATH",
+        str(tmp_path / "streamlit_test.jsonl"),
+    )
     get_settings.cache_clear()
+    reset_logging()
 
     import db.database as database_module
 
@@ -22,6 +28,7 @@ def isolated_streamlit_database(monkeypatch, tmp_path):
     importlib.reload(database_module)
     yield database_path
 
+    reset_logging()
     database_module.ENGINE.dispose()
     monkeypatch.undo()
     get_settings.cache_clear()

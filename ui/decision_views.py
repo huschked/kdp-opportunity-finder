@@ -9,6 +9,7 @@ from analysis.scoring import recommendation_label
 from db.database import session_scope
 from db.repositories import ScoreRepository
 from services.scoring_service import apply_human_score_override, calculate_niche_score
+from ui.errors import render_operation_error
 
 
 COMPONENT_LABELS = {
@@ -26,10 +27,22 @@ def render_decision(niche_id: int) -> None:
     st.caption("Calculate from the evidence currently stored for this niche. Missing facts reduce confidence and remain visible.")
 
     if st.button("Calculate a new snapshot", type="primary", icon=":material/calculate:", key=f"score_{niche_id}"):
-        with session_scope() as session:
-            calculate_niche_score(session, niche_id)
-        st.success("A new automated score snapshot was recorded.")
-        st.rerun()
+        try:
+            with session_scope() as session:
+                calculate_niche_score(session, niche_id)
+        except Exception as exc:
+            render_operation_error(
+                exc,
+                operation="scoring.calculate",
+                summary="A new score snapshot was not recorded.",
+                recovery="Review the stored evidence and scoring configuration, then try again.",
+                context={"niche_id": niche_id},
+                expected=isinstance(exc, ValueError),
+            )
+            return
+        else:
+            st.success("A new automated score snapshot was recorded.")
+            st.rerun()
 
     with session_scope() as session:
         repository = ScoreRepository(session)
@@ -134,7 +147,14 @@ def render_decision(niche_id: int) -> None:
                     rationale=rationale,
                 )
         except ValueError as exc:
-            st.error(str(exc))
+            render_operation_error(
+                exc,
+                operation="scoring.human_override",
+                summary="The human adjustment was not recorded.",
+                recovery="Enter a score from 0 to 100 and a rationale, then try again.",
+                context={"niche_id": niche_id},
+                expected=True,
+            )
         else:
             st.success("The human adjustment was recorded without changing the automated score.")
             st.rerun()

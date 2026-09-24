@@ -20,6 +20,7 @@ from services.export_service import (
     render_export_csv,
     render_export_json,
 )
+from ui.errors import render_operation_error
 
 
 def _preview_frame(dataset: ExportDataset) -> pd.DataFrame:
@@ -79,8 +80,17 @@ st.caption(
     "or uncertainty. Exports never estimate missing marketplace values."
 )
 
-with session_scope() as session:
-    niches = list_export_niches(session)
+try:
+    with session_scope() as session:
+        niches = list_export_niches(session)
+except Exception as exc:
+    render_operation_error(
+        exc,
+        operation="export.load_scope",
+        summary="Export options could not be loaded.",
+        recovery="Refresh the page and try again. Existing research was not changed.",
+    )
+    st.stop()
 
 if not niches:
     st.info("Add a niche or load the synthetic sample before creating an export.")
@@ -128,12 +138,26 @@ else:
         key=f"export_{export_type}_niche",
     )
 
-with session_scope() as session:
-    dataset = build_export_dataset(
-        session,
-        export_type=export_type,
-        niche_id=selected_niche_id,
+try:
+    with session_scope() as session:
+        dataset = build_export_dataset(
+            session,
+            export_type=export_type,
+            niche_id=selected_niche_id,
+        )
+except Exception as exc:
+    render_operation_error(
+        exc,
+        operation="export.build",
+        summary="The export dataset could not be created.",
+        recovery="Review the selected scope and try again. No download was produced.",
+        context={
+            "export_type": export_type,
+            "niche_id": selected_niche_id,
+        },
+        expected=isinstance(exc, ValueError),
     )
+    st.stop()
 
 scope_name = (
     "All niches"
@@ -161,8 +185,22 @@ if dataset.records:
 else:
     st.info("This export is valid but contains no records for the selected scope.")
 
-csv_data = render_export_csv(dataset)
-json_data = render_export_json(dataset)
+try:
+    csv_data = render_export_csv(dataset)
+    json_data = render_export_json(dataset)
+except Exception as exc:
+    render_operation_error(
+        exc,
+        operation="export.render",
+        summary="The export files could not be rendered.",
+        recovery="No download was produced. Try again and use the error reference if the failure repeats.",
+        context={
+            "export_type": export_type,
+            "niche_id": selected_niche_id,
+            "record_count": dataset.record_count,
+        },
+    )
+    st.stop()
 csv_filename = dataset.filename("csv")
 json_filename = dataset.filename("json")
 

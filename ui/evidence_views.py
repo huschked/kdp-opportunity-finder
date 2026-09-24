@@ -6,6 +6,7 @@ import streamlit as st
 from db.database import session_scope
 from db.repositories import EvidenceRepository
 from services.evidence_service import merge_pain_points, rename_pain_point
+from ui.errors import render_operation_error
 
 
 def render_pain_points(niche_id: int) -> None:
@@ -49,7 +50,14 @@ def render_pain_points(niche_id: int) -> None:
                     st.success("Pain point renamed.")
                     st.rerun()
                 except ValueError as exc:
-                    st.error(str(exc))
+                    render_operation_error(
+                        exc,
+                        operation="evidence.pain_point_rename",
+                        summary="The pain-point group was not renamed.",
+                        recovery="Use a non-empty unique name, then try again.",
+                        context={"niche_id": niche_id},
+                        expected=True,
+                    )
         if len(rows) > 1:
             targets = [row["id"] for row in rows if row["id"] != selected_id]
             with st.form("merge_pain_point"):
@@ -61,7 +69,14 @@ def render_pain_points(niche_id: int) -> None:
                         st.success("Pain-point groups merged.")
                         st.rerun()
                     except ValueError as exc:
-                        st.error(str(exc))
+                        render_operation_error(
+                            exc,
+                            operation="evidence.pain_point_merge",
+                            summary="The pain-point groups were not merged.",
+                            recovery="Choose two different groups from the same niche, then try again.",
+                            context={"niche_id": niche_id},
+                            expected=True,
+                        )
 
 
 def render_praise(niche_id: int) -> None:

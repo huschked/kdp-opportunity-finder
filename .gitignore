@@ -8,5 +8,6 @@ kdp_opportunity_finder.db
 backups/*.db
 backups/*.db-wal
 backups/*.db-shm
+logs/
 exports/*
 !exports/.gitkeep
