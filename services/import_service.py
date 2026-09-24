@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Iterable, TypeVar
 
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from analysis.review_cleaning import normalize_review_text, review_text_hash
@@ -18,6 +18,7 @@ from models.schemas import BookInput, ImportIssue, ImportResult, ReviewInput
 
 
 InputT = TypeVar("InputT", bound=BaseModel)
+DUPLICATE_LOOKUP_BATCH_SIZE = 400
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +71,11 @@ def _validation_issues(row_number: int, exc: ValidationError) -> list[ImportIssu
     ]
 
 
+def _batches(values: list[tuple[Any, Any]]) -> Iterable[list[tuple[Any, Any]]]:
+    for offset in range(0, len(values), DUPLICATE_LOOKUP_BATCH_SIZE):
+        yield values[offset : offset + DUPLICATE_LOOKUP_BATCH_SIZE]
+
+
 class ImportService:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -97,13 +103,8 @@ class ImportService:
             return preview
 
         preview.processed_count = len(records)
-        existing = {
-            (source, identifier)
-            for source, identifier in self.session.execute(
-                select(Book.source, Book.source_identifier).where(Book.source_identifier.is_not(None))
-            )
-        }
         seen: set[tuple[str, str]] = set()
+        candidates: list[PreparedRow[BookInput]] = []
         for record in records:
             if not isinstance(record.values, dict):
                 preview.issues.append(
@@ -127,7 +128,7 @@ class ImportService:
                 continue
             if value.source_identifier:
                 key = (value.source, value.source_identifier)
-                if key in existing or key in seen:
+                if key in seen:
                     preview.issues.append(ImportIssue(
                         row_number=record.row_number,
                         field="source_identifier",
@@ -136,7 +137,35 @@ class ImportService:
                     ))
                     continue
                 seen.add(key)
-            preview.valid_rows.append(PreparedRow(record.row_number, value))
+            candidates.append(PreparedRow(record.row_number, value))
+
+        requested_keys = [
+            (row.value.source, row.value.source_identifier)
+            for row in candidates
+            if row.value.source_identifier
+        ]
+        existing: set[tuple[str, str]] = set()
+        for batch in _batches(requested_keys):
+            existing.update(self.session.execute(
+                select(Book.source, Book.source_identifier).where(
+                    tuple_(Book.source, Book.source_identifier).in_(batch)
+                )
+            ))
+        for row in candidates:
+            value = row.value
+            key = (value.source, value.source_identifier) if value.source_identifier else None
+            if key is not None and key in existing:
+                preview.issues.append(ImportIssue(
+                    row_number=row.row_number,
+                    field="source_identifier",
+                    reason=(
+                        f'Duplicate source identifier "{value.source_identifier}" '
+                        f'for source "{value.source}"'
+                    ),
+                    value=value.source_identifier,
+                ))
+            else:
+                preview.valid_rows.append(row)
         return preview
 
     def prepare_reviews(
@@ -162,23 +191,7 @@ class ImportService:
             return preview
 
         preview.processed_count = len(records)
-        identifier_map: dict[str, list[int]] = {}
-        for book_id, identifier in self.session.execute(
-            select(Book.id, Book.source_identifier).where(
-                Book.niche_id == niche_id, Book.source_identifier.is_not(None)
-            )
-        ):
-            identifier_map.setdefault(identifier, []).append(book_id)
-
-        existing_hashes = {
-            (book_id, normalized_hash)
-            for book_id, normalized_hash in self.session.execute(
-                select(Review.book_id, Review.normalized_hash)
-                .join(Book, Book.id == Review.book_id)
-                .where(Book.niche_id == niche_id)
-            )
-        }
-        seen_hashes: set[tuple[int, str]] = set()
+        validated: list[tuple[int, ReviewInput]] = []
         for record in records:
             if not isinstance(record.values, dict):
                 preview.issues.append(
@@ -190,10 +203,25 @@ class ImportService:
             except ValidationError as exc:
                 preview.issues.extend(_validation_issues(record.row_number, exc))
                 continue
+            validated.append((record.row_number, value))
+
+        requested_identifiers = tuple(dict.fromkeys(value.book_identifier for _row, value in validated))
+        identifier_map: dict[str, list[int]] = {}
+        for book_id, identifier in self.session.execute(
+            select(Book.id, Book.source_identifier).where(
+                Book.niche_id == niche_id,
+                Book.source_identifier.in_(requested_identifiers),
+            )
+        ):
+            identifier_map.setdefault(identifier, []).append(book_id)
+
+        seen_hashes: set[tuple[int, str]] = set()
+        candidates: list[PreparedRow[ReviewInput]] = []
+        for row_number, value in validated:
             matches = identifier_map.get(value.book_identifier, [])
             if not matches:
                 preview.issues.append(ImportIssue(
-                    row_number=record.row_number,
+                    row_number=row_number,
                     field="book_identifier",
                     reason=f'No book in this niche has identifier "{value.book_identifier}"',
                     value=value.book_identifier,
@@ -201,7 +229,7 @@ class ImportService:
                 continue
             if len(matches) > 1:
                 preview.issues.append(ImportIssue(
-                    row_number=record.row_number,
+                    row_number=row_number,
                     field="book_identifier",
                     reason=f'Book identifier "{value.book_identifier}" is ambiguous in this niche',
                     value=value.book_identifier,
@@ -210,22 +238,45 @@ class ImportService:
             normalized = normalize_review_text(value.body)
             body_hash = review_text_hash(value.body)
             duplicate_key = (matches[0], body_hash)
-            if duplicate_key in existing_hashes or duplicate_key in seen_hashes:
+            if duplicate_key in seen_hashes:
                 preview.issues.append(ImportIssue(
-                    row_number=record.row_number,
+                    row_number=row_number,
                     field="body",
                     reason="Duplicate review text for this book",
                     value=value.body,
                 ))
                 continue
             seen_hashes.add(duplicate_key)
-            preview.valid_rows.append(PreparedRow(
-                row_number=record.row_number,
+            candidates.append(PreparedRow(
+                row_number=row_number,
                 value=value,
                 resolved_book_id=matches[0],
                 normalized_body=normalized,
                 normalized_hash=body_hash,
             ))
+
+        requested_hashes = [
+            (row.resolved_book_id, row.normalized_hash)
+            for row in candidates
+        ]
+        existing_hashes: set[tuple[int, str]] = set()
+        for batch in _batches(requested_hashes):
+            existing_hashes.update(self.session.execute(
+                select(Review.book_id, Review.normalized_hash).where(
+                    tuple_(Review.book_id, Review.normalized_hash).in_(batch)
+                )
+            ))
+        for row in candidates:
+            duplicate_key = (row.resolved_book_id, row.normalized_hash)
+            if duplicate_key in existing_hashes:
+                preview.issues.append(ImportIssue(
+                    row_number=row.row_number,
+                    field="body",
+                    reason="Duplicate review text for this book",
+                    value=row.value.body,
+                ))
+            else:
+                preview.valid_rows.append(row)
         return preview
 
     def import_books(self, *, niche_id: int, preview: ImportPreview[BookInput]) -> ImportResult:

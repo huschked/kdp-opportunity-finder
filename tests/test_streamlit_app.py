@@ -111,10 +111,12 @@ def test_app_dashboard_and_sample_load(isolated_streamlit_database) -> None:
     assert len(app.metric) == 4
     assert len(app.dataframe[0].value) == 3
 
-    app.multiselect(key="pipeline_status_filter").set_value(["promising"]).run()
+    app.multiselect(key="pipeline_status_filter").set_value(["promising"])
+    next(button for button in app.button if button.label == "Apply filters").click().run()
     assert not app.exception
     assert len(app.dataframe[0].value) == 1
-    app.multiselect(key="pipeline_status_filter").set_value([]).run()
+    app.multiselect(key="pipeline_status_filter").set_value([])
+    next(button for button in app.button if button.label == "Apply filters").click().run()
     assert not app.exception
 
     niche_id = app.selectbox(key="pipeline_move_niche").value

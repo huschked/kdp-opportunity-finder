@@ -38,7 +38,7 @@ Implemented:
 - rotating JSON-lines operational logs with safe context, redaction, error reference IDs, and recovery-oriented Streamlit messages
 - database, scoring, import, cleaning, market-summary, analysis, export, and Streamlit tests
 
-Phase 5 is complete. Phase 6 hardening is underway. See [TEST_MATRIX.md](TEST_MATRIX.md) for guarded behavior, [MIGRATIONS.md](MIGRATIONS.md) for the safe database workflow, [ARCHITECTURE.md](ARCHITECTURE.md) for design, and [KANBAN.md](KANBAN.md) for live execution status.
+Phase 5 is complete. Phase 6 hardening is underway. See [TEST_MATRIX.md](TEST_MATRIX.md) for guarded behavior, [MIGRATIONS.md](MIGRATIONS.md) for the safe database workflow, [PERFORMANCE.md](PERFORMANCE.md) for repeatable local profiling and explicit bounds, [ARCHITECTURE.md](ARCHITECTURE.md) for design, and [KANBAN.md](KANBAN.md) for live execution status.
 
 ## Installation
 
@@ -112,11 +112,20 @@ pytest
 
 See [TEST_MATRIX.md](TEST_MATRIX.md) for the critical-business-rule coverage inventory, protected guardrails, and documented residual risks.
 
+Run the disposable representative-data performance profile with:
+
+```powershell
+.venv\Scripts\python.exe scripts\profile_performance.py --repeats 5
+```
+
+See [PERFORMANCE.md](PERFORMANCE.md) for before/after measurements, query and batch boundaries, cache-invalidation behavior, and interpretation guidance.
+
 ## Data and configuration
 
 - Default database: `kdp_opportunity_finder.db` in the project root.
 - Override with `KDP_DATABASE_URL` in `.env`.
 - Schema revisions and backup/recovery workflow: [MIGRATIONS.md](MIGRATIONS.md).
+- Performance measurements and explicit query/batch bounds: [PERFORMANCE.md](PERFORMANCE.md).
 - Operational log: `logs/kdp_opportunity_finder.jsonl`; configure with `KDP_LOG_PATH` and `KDP_LOG_LEVEL`.
 - Scoring weights and targets: `config/scoring.yaml`; the six weights must total 1.0 and each snapshot stores the exact policy used.
 - LLM provider: `KDP_LLM_PROVIDER=mock` by default.

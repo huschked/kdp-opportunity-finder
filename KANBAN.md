@@ -13,7 +13,7 @@ This board tracks execution. `ARCHITECTURE.md` remains the authority for system 
 | Phase 3 — Evidence extraction | Done | Structured review analysis, clustering, caching, and traceability |
 | Phase 4 — Decisions | Done | Evidence-backed scoring, confidence, UDI, explanations, gating, and additive overrides |
 | Phase 5 — Outputs and workflow | Done | Reports, specifications, comparison, pipeline, and traceable exports |
-| Phase 6 — Hardening | In progress | Test matrix, guarded migrations, and operational error handling complete; performance is next |
+| Phase 6 — Hardening | In progress | Test matrix, guarded migrations, operational errors, and performance complete; accessibility and visual cleanup are next |
 
 ## In progress
 
@@ -21,17 +21,12 @@ No active card.
 
 ## Ready
 
-### P6-PERF-01 — Query, batch, and rerun performance review
+### P6-UI-01 — Accessibility, responsive layout, empty states, and visual cleanup
 
 - **Priority:** P1
-- **Deliverable:** Measure and improve the slowest local workflows without weakening evidence traceability or hiding data through silent limits.
-- **Acceptance criteria:**
-  - Dashboard, niche detail, comparison, pipeline, export, import, scoring, and analysis flows are measured with representative local data.
-  - Avoidable repeated queries, unbounded materialization, and unnecessary Streamlit rerun work are removed where evidence shows a meaningful cost.
-  - Any batching, caching, pagination, or display limit is explicit, deterministic, and cannot silently change evidence totals or decision outputs.
-  - Regression tests cover query/batch boundaries and cache invalidation where optimization could otherwise create stale or incomplete results.
-- **Dependencies:** `P6-ERROR-01`.
-- **Verification:** Before/after measurements, targeted performance safeguards, full regression suite, and running-app smoke test.
+- **Deliverable:** Complete a focused UI quality pass without obscuring evidence, uncertainty, or human-control boundaries.
+- **Dependencies:** `P6-PERF-01`.
+- **Verification:** AppTest coverage, desktop/mobile review, full regression suite, and running-app smoke test.
 
 ## Backlog
 
@@ -41,7 +36,6 @@ No remaining Phase 5 cards.
 
 ### Phase 6 — Hardening
 
-- `P6-UI-01` — Accessibility, responsive layout, empty states, and visual cleanup.
 - `P6-DOCS-01` — Final README, import references, limitations, and roadmap.
 
 ## Blocked
@@ -303,6 +297,23 @@ Use this section only when a card cannot progress without a user decision, missi
 - The incompatible-schema test preserves its existing database row and does not add an Alembic version marker.
 - Python compilation and repository whitespace validation pass.
 - A temporary Streamlit server returned HTTP 200 for health and root endpoints after the error-boundary changes.
+
+### P6-PERF-01 — Query, batch, and rerun performance review
+
+- `PERFORMANCE.md` and `scripts/profile_performance.py` measure dashboard, niche detail, comparison, pipeline, exports, import preview, scoring, full analysis, and cached analysis against a disposable migrated 3-niche/30-book/180-review database.
+- Dashboard reads dropped from 7 SQL statements to 4, pipeline from 5 to 3, competitor detail from 2 to 1, and review detail from 5 to 4 while preserving returned totals.
+- Latest score and market rows are selected deterministically in SQL, so historical snapshot depth no longer causes comparison, pipeline, dashboard, or book export to materialize every prior snapshot.
+- Import duplicate checks query only candidate keys in explicit 400-pair batches; analysis extraction remains capped at 50 reviews per provider call.
+- Fully cached analysis runs retain an audit record and exact evidence counts while making zero extraction or clustering provider calls; new or changed reviews still invalidate their extraction cache.
+- Pipeline filters submit together and reuse the loaded snapshot, niche detail loads only the selected view's data, and no cross-rerun database cache can serve stale decision evidence.
+- Full-scope exports remain untruncated; the visible preview limit does not alter CSV/JSON records or manifest totals.
+
+### P6-PERF-VERIFY-01 — Performance verification
+
+- Eighty-six tests pass, including latest-row history/tie boundaries, single-statement totals, query-free pipeline filtering, the 400-pair import boundary, the 50-review analysis batch cap, zero-call cache reuse, and new-content invalidation.
+- The disposable performance profile completed all representative workflows and recorded SQL counts, returned totals, and median local timings.
+- Streamlit AppTest passed the updated form interaction; Python compilation and repository whitespace validation passed.
+- A temporary Streamlit server returned HTTP 200 for health and root endpoints after the performance changes.
 
 ## Scope guardrails
 

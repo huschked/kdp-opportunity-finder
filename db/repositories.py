@@ -9,6 +9,7 @@ from datetime import date
 from sqlalchemy import distinct, func, or_, select
 from sqlalchemy.orm import Session
 
+from db.query_helpers import latest_score_snapshot_ids
 from models import (
     AnalysisRun,
     Book,
@@ -67,32 +68,30 @@ class DashboardRepository:
 
     def totals(self) -> DashboardTotals:
         promising_statuses = ("promising", "validation", "production", "published")
+        counts = self.session.execute(
+            select(
+                select(func.count(Niche.id)).scalar_subquery(),
+                select(func.count(Book.id)).scalar_subquery(),
+                select(func.count(Review.id)).scalar_subquery(),
+                select(func.count(Niche.id))
+                .where(Niche.status.in_(promising_statuses))
+                .scalar_subquery(),
+            )
+        ).one()
         return DashboardTotals(
-            niches=self.session.scalar(select(func.count(Niche.id))) or 0,
-            books=self.session.scalar(select(func.count(Book.id))) or 0,
-            reviews=self.session.scalar(select(func.count(Review.id))) or 0,
-            promising=self.session.scalar(
-                select(func.count(Niche.id)).where(Niche.status.in_(promising_statuses))
-            ) or 0,
+            niches=counts[0] or 0,
+            books=counts[1] or 0,
+            reviews=counts[2] or 0,
+            promising=counts[3] or 0,
         )
 
     def latest_scores(self) -> list[dict[str, object]]:
-        latest = (
-            select(
-                ScoreSnapshot.niche_id,
-                func.max(ScoreSnapshot.calculated_at).label("calculated_at"),
-            )
-            .group_by(ScoreSnapshot.niche_id)
-            .subquery()
-        )
+        latest = latest_score_snapshot_ids()
         statement = (
             select(Niche, ScoreSnapshot)
             .join(ScoreSnapshot, ScoreSnapshot.niche_id == Niche.id)
-            .join(
-                latest,
-                (latest.c.niche_id == ScoreSnapshot.niche_id)
-                & (latest.c.calculated_at == ScoreSnapshot.calculated_at),
-            )
+            .join(latest, latest.c.snapshot_id == ScoreSnapshot.id)
+            .where(latest.c.snapshot_rank == 1)
             .order_by(ScoreSnapshot.automated_overall_score.desc())
         )
         rows = []
@@ -298,8 +297,8 @@ class ReviewRepository:
         ) or 0
 
     def analysis_filter_options(self, niche_id: int) -> dict[str, object]:
-        analyses = list(self.session.scalars(
-            select(ReviewAnalysis)
+        analyses = list(self.session.execute(
+            select(ReviewAnalysis.sentiment, ReviewAnalysis.topics_json)
             .join(Review, Review.id == ReviewAnalysis.review_id)
             .join(Book, Book.id == Review.book_id)
             .where(Book.niche_id == niche_id)
@@ -314,8 +313,8 @@ class ReviewRepository:
             .order_by(PainPoint.canonical_name)
         ))
         return {
-            "sentiments": sorted({item.sentiment for item in analyses if item.sentiment}),
-            "topics": sorted({topic for item in analyses for topic in (item.topics_json or [])}),
+            "sentiments": sorted({sentiment for sentiment, _topics in analyses if sentiment}),
+            "topics": sorted({topic for _sentiment, topics in analyses for topic in (topics or [])}),
             "pain_points": pain_points,
         }
 

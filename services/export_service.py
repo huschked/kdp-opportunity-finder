@@ -13,10 +13,10 @@ from typing import Any, Mapping
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from db.query_helpers import latest_market_snapshots
 from models import (
     Book,
     DataSource,
-    MarketSnapshot,
     Niche,
     Review,
     ReviewAnalysis,
@@ -213,27 +213,6 @@ def _require_niche(session: Session, niche_id: int) -> Niche:
     return niche
 
 
-def _latest_market_snapshots(
-    session: Session,
-    book_ids: list[int],
-) -> dict[int, MarketSnapshot]:
-    if not book_ids:
-        return {}
-    snapshots = session.scalars(
-        select(MarketSnapshot)
-        .where(MarketSnapshot.book_id.in_(book_ids))
-        .order_by(
-            MarketSnapshot.book_id,
-            MarketSnapshot.observed_at.desc(),
-            MarketSnapshot.id.desc(),
-        )
-    )
-    latest: dict[int, MarketSnapshot] = {}
-    for snapshot in snapshots:
-        latest.setdefault(snapshot.book_id, snapshot)
-    return latest
-
-
 def _decision_dataset(
     session: Session,
     *,
@@ -346,7 +325,7 @@ def _book_dataset(
             .order_by(Book.title, Book.id)
         )
     )
-    snapshots = _latest_market_snapshots(session, [book.id for book, _source in rows])
+    snapshots = latest_market_snapshots(session, [book.id for book, _source in rows])
     records: list[dict[str, Any]] = []
     for book, source in rows:
         snapshot = snapshots.get(book.id)

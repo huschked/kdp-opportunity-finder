@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from analysis.scoring import recommendation_label
+from db.query_helpers import latest_score_snapshots
 from models import Niche, NicheStatus, NicheStatusTransition, ScoreSnapshot
 
 
@@ -69,24 +70,6 @@ class StatusHistoryRow:
     to_status: str
     rationale: str
     changed_at: datetime
-
-
-def _latest_snapshots(session: Session, niche_ids: Sequence[int]) -> dict[int, ScoreSnapshot]:
-    if not niche_ids:
-        return {}
-    snapshots = session.scalars(
-        select(ScoreSnapshot)
-        .where(ScoreSnapshot.niche_id.in_(niche_ids))
-        .order_by(
-            ScoreSnapshot.niche_id,
-            ScoreSnapshot.calculated_at.desc(),
-            ScoreSnapshot.id.desc(),
-        )
-    )
-    latest: dict[int, ScoreSnapshot] = {}
-    for snapshot in snapshots:
-        latest.setdefault(snapshot.niche_id, snapshot)
-    return latest
 
 
 def _pipeline_row(niche: Niche, snapshot: ScoreSnapshot | None) -> PipelineRow:
@@ -150,18 +133,37 @@ def load_pipeline(
 ) -> PipelineSnapshot:
     """Load filtered rows plus unfiltered counts for every defined workflow stage."""
 
-    selected_statuses = tuple(dict.fromkeys(statuses or ()))
-    invalid_statuses = [status for status in selected_statuses if status not in STATUS_LABELS]
-    if invalid_statuses:
-        raise ValueError(f"Invalid pipeline status: {', '.join(invalid_statuses)}")
-
     niches = list(session.scalars(select(Niche).order_by(Niche.updated_at.desc(), Niche.name)))
-    latest = _latest_snapshots(session, [niche.id for niche in niches])
+    latest = latest_score_snapshots(session, [niche.id for niche in niches])
     stage_counts = {status: 0 for status in STATUS_ORDER}
     for niche in niches:
         stage_counts[niche.status] = stage_counts.get(niche.status, 0) + 1
 
     rows = [_pipeline_row(niche, latest.get(niche.id)) for niche in niches]
+    order = {status: index for index, status in enumerate(STATUS_ORDER)}
+    rows.sort(key=lambda row: (order.get(row.status, len(order)), row.niche_name.casefold()))
+    snapshot = PipelineSnapshot(
+        rows=tuple(rows),
+        stage_counts=stage_counts,
+        total_count=len(niches),
+    )
+    return filter_pipeline(snapshot, statuses=statuses, query=query)
+
+
+def filter_pipeline(
+    snapshot: PipelineSnapshot,
+    *,
+    statuses: Sequence[str] | None = None,
+    query: str = "",
+) -> PipelineSnapshot:
+    """Filter an already-loaded snapshot without repeating database queries."""
+
+    selected_statuses = tuple(dict.fromkeys(statuses or ()))
+    invalid_statuses = [status for status in selected_statuses if status not in STATUS_LABELS]
+    if invalid_statuses:
+        raise ValueError(f"Invalid pipeline status: {', '.join(invalid_statuses)}")
+
+    rows = list(snapshot.rows)
     if selected_statuses:
         selected = set(selected_statuses)
         rows = [row for row in rows if row.status in selected]
@@ -174,12 +176,10 @@ def load_pipeline(
             or normalized_query in row.seed_keyword.casefold()
         ]
 
-    order = {status: index for index, status in enumerate(STATUS_ORDER)}
-    rows.sort(key=lambda row: (order.get(row.status, len(order)), row.niche_name.casefold()))
     return PipelineSnapshot(
         rows=tuple(rows),
-        stage_counts=stage_counts,
-        total_count=len(niches),
+        stage_counts=snapshot.stage_counts,
+        total_count=snapshot.total_count,
     )
 
 

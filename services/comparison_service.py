@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from analysis.scoring import recommendation_label
+from db.query_helpers import latest_score_snapshots
 from models import Niche, ScoreSnapshot
 
 
@@ -78,25 +79,6 @@ def _float_or_none(value: object) -> float | None:
 def _int_or_none(value: object) -> int | None:
     numeric = _float_or_none(value)
     return int(numeric) if numeric is not None else None
-
-
-def _latest_snapshots(
-    session: Session,
-    niche_ids: Sequence[int],
-) -> dict[int, ScoreSnapshot]:
-    snapshots = session.scalars(
-        select(ScoreSnapshot)
-        .where(ScoreSnapshot.niche_id.in_(niche_ids))
-        .order_by(
-            ScoreSnapshot.niche_id,
-            ScoreSnapshot.calculated_at.desc(),
-            ScoreSnapshot.id.desc(),
-        )
-    )
-    latest: dict[int, ScoreSnapshot] = {}
-    for snapshot in snapshots:
-        latest.setdefault(snapshot.niche_id, snapshot)
-    return latest
 
 
 def _unscored_row(niche: Niche) -> NicheComparisonRow:
@@ -271,7 +253,7 @@ def compare_niches(session: Session, niche_ids: Sequence[int]) -> NicheCompariso
     if missing_ids:
         raise ValueError(f"Niche not found: {', '.join(str(value) for value in missing_ids)}")
 
-    latest = _latest_snapshots(session, ordered_ids)
+    latest = latest_score_snapshots(session, ordered_ids)
     rows = [
         _snapshot_row(niches_by_id[niche_id], latest[niche_id])
         if niche_id in latest

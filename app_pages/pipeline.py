@@ -11,6 +11,7 @@ from services.pipeline_service import (
     STATUS_ORDER,
     PipelineRow,
     change_niche_status,
+    filter_pipeline,
     load_pipeline,
     status_history,
 )
@@ -50,6 +51,7 @@ if status_message:
 
 with session_scope() as session:
     full_pipeline = load_pipeline(session)
+    history_rows = status_history(session, limit=50)
 
 if not full_pipeline.total_count:
     st.info("Add a niche or load the synthetic sample before using the pipeline.")
@@ -81,29 +83,29 @@ stage_frame["Stage"] = pd.Categorical(
 st.bar_chart(stage_frame, x="Stage", y="Niches", sort=False, height=300)
 
 st.subheader("Niches")
-filter_columns = st.columns([1, 2])
-with filter_columns[0]:
-    search_query = st.text_input(
-        "Search niches",
-        key="pipeline_search",
-        placeholder="Name or seed keyword",
-    )
-with filter_columns[1]:
-    selected_statuses = st.multiselect(
-        "Filter by status",
-        options=list(STATUS_ORDER),
-        format_func=lambda status: STATUS_LABELS[status],
-        key="pipeline_status_filter",
-        placeholder="All statuses",
-    )
+with st.form("pipeline_filters", border=False):
+    filter_columns = st.columns([1, 2])
+    with filter_columns[0]:
+        search_query = st.text_input(
+            "Search niches",
+            key="pipeline_search",
+            placeholder="Name or seed keyword",
+        )
+    with filter_columns[1]:
+        selected_statuses = st.multiselect(
+            "Filter by status",
+            options=list(STATUS_ORDER),
+            format_func=lambda status: STATUS_LABELS[status],
+            key="pipeline_status_filter",
+            placeholder="All statuses",
+        )
+    st.form_submit_button("Apply filters", icon=":material/filter_alt:")
 
-with session_scope() as session:
-    filtered_pipeline = load_pipeline(
-        session,
-        statuses=selected_statuses,
-        query=search_query,
-    )
-    history_rows = status_history(session, limit=50)
+filtered_pipeline = filter_pipeline(
+    full_pipeline,
+    statuses=selected_statuses,
+    query=search_query,
+)
 
 st.caption(
     f"Showing {filtered_pipeline.visible_count} of {filtered_pipeline.total_count} niches. "

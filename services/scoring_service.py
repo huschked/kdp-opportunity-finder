@@ -9,7 +9,7 @@ import re
 from typing import Any
 
 import yaml
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from analysis.decision import DecisionEvidence, DecisionTargets, build_decision
@@ -140,9 +140,9 @@ def collect_decision_evidence(
         topic_count=len(topics),
         outcome_count=len(outcomes),
         pain_point_count=len({point.id for _, point in pain_rows}),
-        praise_feature_count=len(list(session.scalars(
-            select(PraiseFeature.id).where(PraiseFeature.niche_id == niche_id)
-        ))),
+        praise_feature_count=session.scalar(
+            select(func.count(PraiseFeature.id)).where(PraiseFeature.niche_id == niche_id)
+        ) or 0,
         field_coverage=field_coverage,
         collection_recency_score=recency_score,
         analyzed_reviews_by_book=tuple(analyzed_book_counts.values()),

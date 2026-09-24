@@ -34,16 +34,13 @@ view = st.selectbox(
     "View", ("Decision", "Opportunity report", "Competitors", "Reviews", "Pain points", "Praise", "Analysis history"), index=0, key="detail_view"
 )
 
-with session_scope() as session:
-    book_repository = BookRepository(session)
-    books = book_repository.list_by_niche(niche_id)
-    competitor_rows = book_repository.rows_by_niche(niche_id)
-
 if view == "Decision":
     render_decision(niche_id)
 elif view == "Opportunity report":
     render_opportunity_report(niche_id)
 elif view == "Competitors":
+    with session_scope() as session:
+        competitor_rows = BookRepository(session).rows_by_niche(niche_id)
     st.subheader("Competitor evidence")
     summary = summarize_competitors(competitor_rows)
     metrics = st.columns(3)
@@ -107,9 +104,10 @@ elif view == "Competitors":
         st.info("No competitors match the current filters.")
 elif view == "Reviews":
     st.subheader("Review evidence")
-    book_options = {book.id: book.title for book in books}
     with session_scope() as session:
+        books = BookRepository(session).list_by_niche(niche_id)
         filter_options = ReviewRepository(session).analysis_filter_options(niche_id)
+    book_options = {book.id: book.title for book in books}
     pain_options = {item.id: item.canonical_name for item in filter_options["pain_points"]}
     with st.form("review_filters", border=False):
         query = st.text_input("Search review title or text", key="review_query")

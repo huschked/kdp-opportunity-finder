@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from config.settings import Settings, get_settings
@@ -134,6 +134,59 @@ def analyze_niche_reviews(
         completed = len(extracted)
         if progress:
             progress(completed, total, f"Reused {completed} cached reviews")
+
+        if not pending:
+            excluded_count = sum(
+                1
+                for result in extracted.values()
+                for item in result.pain_points
+                if item.category in EXCLUDED_CATEGORIES or not item.solvable_in_book
+            )
+            active_pain_point_count = session.scalar(
+                select(func.count(func.distinct(ReviewPainPoint.pain_point_id)))
+                .join(Review, Review.id == ReviewPainPoint.review_id)
+                .join(Book, Book.id == Review.book_id)
+                .where(Book.niche_id == niche_id)
+            ) or 0
+            active_praise_feature_count = session.scalar(
+                select(func.count(func.distinct(ReviewPraiseFeature.praise_feature_id)))
+                .join(Review, Review.id == ReviewPraiseFeature.review_id)
+                .join(Book, Book.id == Review.book_id)
+                .where(Book.niche_id == niche_id)
+            ) or 0
+            estimated_cost = _cost(usage, provider, settings)
+            run = session.get(AnalysisRun, run_id)
+            assert run is not None
+            run.status = "completed"
+            run.completed_at = datetime.now(timezone.utc)
+            run.input_tokens = 0
+            run.output_tokens = 0
+            run.estimated_cost_usd = estimated_cost
+            run.result_json = {
+                "reviews": [extracted[review.id].model_dump(mode="json") for review in reviews],
+                "review_count": total,
+                "analyzed_count": 0,
+                "cached_count": total,
+                "pain_point_count": active_pain_point_count,
+                "praise_feature_count": active_praise_feature_count,
+                "excluded_complaint_count": excluded_count,
+            }
+            session.commit()
+            if progress:
+                progress(total, total, "All review evidence was current; provider calls skipped")
+            return AnalysisSummary(
+                run_id=run_id,
+                review_count=total,
+                analyzed_count=0,
+                cached_count=total,
+                pain_point_count=active_pain_point_count,
+                praise_feature_count=active_praise_feature_count,
+                excluded_complaint_count=excluded_count,
+                input_tokens=0,
+                output_tokens=0,
+                estimated_cost_usd=estimated_cost,
+            )
+
         for offset in range(0, len(pending), size):
             batch = pending[offset : offset + size]
             request = [
